@@ -81,7 +81,7 @@ scene.add(mesh7);
 const meshes = [mesh0, mesh1, mesh2, mesh3, mesh4, mesh5, mesh6, mesh7];
 
 //FRONT view
-let newNumber = new NumberConstruct(1234.56, "European", "Avenir_Black");
+let newNumber = new NumberConstruct(1234.5678, "European", "Press Start 2P");
 newNumber.addNumberGeometry(scene, materialEmpty, new THREE.Vector3(-10, -10, -10));
 
 /**
