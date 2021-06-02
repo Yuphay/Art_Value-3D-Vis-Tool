@@ -81,7 +81,11 @@ scene.add(mesh7);
 const meshes = [mesh0, mesh1, mesh2, mesh3, mesh4, mesh5, mesh6, mesh7];
 
 //FRONT view
+<<<<<<< HEAD
 let newNumber = new NumberConstruct(10004567.89, "European", "Crash Numbering Serif");
+=======
+let newNumber = new NumberConstruct(1234.5678, "European", "Press Start 2P");
+>>>>>>> main
 newNumber.addNumberGeometry(scene, materialEmpty, new THREE.Vector3(-10, -10, -10));
 
 /**
