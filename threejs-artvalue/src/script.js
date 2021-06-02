@@ -27,12 +27,16 @@ const normalTexture = textureLoader.load('/textures/seamless_brick_rock_wall_nor
 });
 
 // Objects
-const geometry = new THREE.BoxGeometry(1, 1, 1);
+const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 
 // Materials
 const materialTile = new THREE.MeshStandardMaterial()
 materialTile.metalness = 0.0
 materialTile.roughness = 0.7
+
+normalTexture.wrapS = THREE.RepeatWrapping;
+normalTexture.wrapT = THREE.RepeatWrapping;
+normalTexture.repeat.set(0.5, 0.5); // scale
 
 materialTile.normalMap = normalTexture;
 materialTile.color = new THREE.Color(0x808080);
@@ -46,44 +50,39 @@ materialSelected.transparent = true;
 materialSelected.opacity = 0.2;
 
 // Meshes
-const mesh0 = new THREE.Mesh(geometry, materialEmpty);
+const mesh0 = new THREE.Mesh(boxGeometry, materialEmpty);
 mesh0.position.set(0, 0, 0);
 scene.add(mesh0);
 
-const mesh1 = new THREE.Mesh(geometry, materialEmpty);
+const mesh1 = new THREE.Mesh(boxGeometry, materialEmpty);
 mesh1.position.set(0, 0, 1);
 scene.add(mesh1);
 
-const mesh2 = new THREE.Mesh(geometry, materialEmpty);
+const mesh2 = new THREE.Mesh(boxGeometry, materialEmpty);
 mesh2.position.set(1, 0, 0);
 scene.add(mesh2);
 
-const mesh3 = new THREE.Mesh(geometry, materialEmpty);
+const mesh3 = new THREE.Mesh(boxGeometry, materialEmpty);
 mesh3.position.set(1, 0, 1);
 scene.add(mesh3);
 
-const mesh4 = new THREE.Mesh(geometry, materialEmpty);
+const mesh4 = new THREE.Mesh(boxGeometry, materialEmpty);
 mesh4.position.set(0, 1, 0);
 scene.add(mesh4);
 
-const mesh5 = new THREE.Mesh(geometry, materialEmpty);
+const mesh5 = new THREE.Mesh(boxGeometry, materialEmpty);
 mesh5.position.set(0, 1, 1);
 scene.add(mesh5);
 
-const mesh6 = new THREE.Mesh(geometry, materialEmpty);
+const mesh6 = new THREE.Mesh(boxGeometry, materialEmpty);
 mesh6.position.set(1, 1, 0);
 scene.add(mesh6);
 
-const mesh7 = new THREE.Mesh(geometry, materialEmpty);
+const mesh7 = new THREE.Mesh(boxGeometry, materialEmpty);
 mesh7.position.set(1, 1, 1);
 scene.add(mesh7);
 
 const meshes = [mesh0, mesh1, mesh2, mesh3, mesh4, mesh5, mesh6, mesh7];
-
-//FRONT view
-
-let newNumber = new NumberConstruct(10004567.89, "European", "Avenir Black");
-newNumber.addNumberGeometry(scene, materialEmpty, new THREE.Vector3(-10, -10, -10));
 
 /**
  * Lights
@@ -134,11 +133,11 @@ window.addEventListener('resize', () => {
  * Camera
  */
 // Base camera
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100);
-camera.position.set(0, 0, 4);
+const camera = new THREE.PerspectiveCamera(50, sizes.width / sizes.height, 0.1, 500);
+camera.position.set(0, 0, 30);
 scene.add(camera);
 
-// Controls
+// Camera controls
 const orbitControls = new OrbitControls(camera, canvas);
 orbitControls.enableDamping = false;
 
@@ -160,9 +159,19 @@ renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
+/**
+ * Contents
+ */
+
+// FRONT view
+// TODO: Customization UI
+let newNumber = new NumberConstruct(12067.89, "European", "Avenir Black");
+newNumber.addNumberGeometry(scene, materialTile, orbitControls);
+// TODO: Confirm style
+
 
 /**
- * Interaction
+ * Interactions
  */
 window.addEventListener('mousemove', onMouseMove, false);
 

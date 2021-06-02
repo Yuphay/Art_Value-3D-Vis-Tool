@@ -15,17 +15,17 @@ export class NumberConstruct {
         this.numberToText();
     }
 
-    addNumberGeometry(scene, material, position) {
+    addNumberGeometry(scene, material, controls) {
 
         this.fontLoader.load(this.numberFont, function (font) {
             const geometry = new THREE.TextGeometry(this.numberText, {
                 font: font,
                 size: 5,
                 height: 1,
-                curveSegments: 12,
+                curveSegments: 64,
                 bevelEnabled: false,
-                bevelThickness: 1,
-                bevelSize: 1,
+                bevelThickness: 0.1,
+                bevelSize: 0.1,
                 bevelOffset: 0,
                 bevelSegments: 5
             });
@@ -34,8 +34,14 @@ export class NumberConstruct {
             materialEmpty.transparent = true;
             materialEmpty.opacity = 0.5;
 
+            geometry.center();
             const meshNumber = new THREE.Mesh(geometry, material);
-            meshNumber.position.set(position.x, position.y, position.z);
+
+            // let boundingBox = new THREE.Box3();
+            // boundingBox.setFromObject(geometry);
+            // boundingBox.setfromc
+
+            meshNumber.position.set(0, 0, 0);
             scene.add(meshNumber);
         }.bind(this));
     }
@@ -100,30 +106,28 @@ export class NumberConstruct {
             else if (this.numberStyle === "US") {
                 this.numberText = this.numberText.concat(",");
             }
-            else if (this.numberStyle === "No Separator") {
+            else if (this.numberStyle === "European No Separator") {
+                // Doing nothing
+            }
+            else if (this.numberStyle === "US No Separator") {
                 // Doing nothing
             }
             loopCount += 1;
         }
-        if (this.numberStyle !== "No Separator") {
+        if (this.numberStyle === "European" || this.numberStyle === "US") {
             this.numberText = this.numberText.substring(0, this.numberText.length - 1);
         }
 
         const decimal = (this.numberValue - integer).toFixed(2).substring(2);
         if (decimal != 0) {
-            if (this.numberStyle === "European") {
+            if (this.numberStyle === "European" || this.numberStyle === "European No Separator") {
                 this.numberText = this.numberText.concat(",");
             }
-            else if (this.numberStyle === "US") {
+            else if (this.numberStyle === "US" || this.numberStyle === "US No Separator") {
                 this.numberText = this.numberText.concat(".");
             }
-            else if (this.numberStyle === "No Separator") {
-                this.numberText = this.numberText.concat(".");
-            }
+
             this.numberText = this.numberText.concat(decimal);
         }
-
-
-
     }
 }
