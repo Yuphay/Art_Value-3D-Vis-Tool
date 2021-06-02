@@ -11,6 +11,14 @@ import { NumberConstruct } from './class_NumberConstruct.js';
 // Debug
 const gui = new dat.GUI();
 
+let GUIOptions = {
+    lightHelperFlag: false,
+    lightHelperEnabled: false,
+    numberValue: '1234.56',
+    numberStyle: 'European',
+    numberFont: 'Avenir Black',
+};
+
 // Canvas
 const canvas = document.querySelector('canvas.webgl');
 
@@ -27,12 +35,16 @@ const normalTexture = textureLoader.load('/textures/seamless_brick_rock_wall_nor
 });
 
 // Objects
-const geometry = new THREE.BoxGeometry(1, 1, 1);
+const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 
 // Materials
 const materialTile = new THREE.MeshStandardMaterial()
 materialTile.metalness = 0.0
 materialTile.roughness = 0.7
+
+normalTexture.wrapS = THREE.RepeatWrapping;
+normalTexture.wrapT = THREE.RepeatWrapping;
+normalTexture.repeat.set(0.5, 0.5); // scale
 
 materialTile.normalMap = normalTexture;
 materialTile.color = new THREE.Color(0x808080);
@@ -46,44 +58,39 @@ materialSelected.transparent = true;
 materialSelected.opacity = 0.2;
 
 // Meshes
-const mesh0 = new THREE.Mesh(geometry, materialEmpty);
-mesh0.position.set(0, 0, 0);
-scene.add(mesh0);
+// const mesh0 = new THREE.Mesh(boxGeometry, materialEmpty);
+// mesh0.position.set(0, 0, 0);
+// scene.add(mesh0);
 
-const mesh1 = new THREE.Mesh(geometry, materialEmpty);
-mesh1.position.set(0, 0, 1);
-scene.add(mesh1);
+// const mesh1 = new THREE.Mesh(boxGeometry, materialEmpty);
+// mesh1.position.set(0, 0, 1);
+// scene.add(mesh1);
 
-const mesh2 = new THREE.Mesh(geometry, materialEmpty);
-mesh2.position.set(1, 0, 0);
-scene.add(mesh2);
+// const mesh2 = new THREE.Mesh(boxGeometry, materialEmpty);
+// mesh2.position.set(1, 0, 0);
+// scene.add(mesh2);
 
-const mesh3 = new THREE.Mesh(geometry, materialEmpty);
-mesh3.position.set(1, 0, 1);
-scene.add(mesh3);
+// const mesh3 = new THREE.Mesh(boxGeometry, materialEmpty);
+// mesh3.position.set(1, 0, 1);
+// scene.add(mesh3);
 
-const mesh4 = new THREE.Mesh(geometry, materialEmpty);
-mesh4.position.set(0, 1, 0);
-scene.add(mesh4);
+// const mesh4 = new THREE.Mesh(boxGeometry, materialEmpty);
+// mesh4.position.set(0, 1, 0);
+// scene.add(mesh4);
 
-const mesh5 = new THREE.Mesh(geometry, materialEmpty);
-mesh5.position.set(0, 1, 1);
-scene.add(mesh5);
+// const mesh5 = new THREE.Mesh(boxGeometry, materialEmpty);
+// mesh5.position.set(0, 1, 1);
+// scene.add(mesh5);
 
-const mesh6 = new THREE.Mesh(geometry, materialEmpty);
-mesh6.position.set(1, 1, 0);
-scene.add(mesh6);
+// const mesh6 = new THREE.Mesh(boxGeometry, materialEmpty);
+// mesh6.position.set(1, 1, 0);
+// scene.add(mesh6);
 
-const mesh7 = new THREE.Mesh(geometry, materialEmpty);
-mesh7.position.set(1, 1, 1);
-scene.add(mesh7);
+// const mesh7 = new THREE.Mesh(boxGeometry, materialEmpty);
+// mesh7.position.set(1, 1, 1);
+// scene.add(mesh7);
 
-const meshes = [mesh0, mesh1, mesh2, mesh3, mesh4, mesh5, mesh6, mesh7];
-
-//FRONT view
-
-let newNumber = new NumberConstruct(10004567.89, "European", "Avenir Black");
-newNumber.addNumberGeometry(scene, materialEmpty, new THREE.Vector3(-10, -10, -10));
+// const meshes = [mesh0, mesh1, mesh2, mesh3, mesh4, mesh5, mesh6, mesh7];
 
 /**
  * Lights
@@ -94,19 +101,31 @@ scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
 directionalLight.castShadow = true;
 directionalLight.shadow.mapSize.set(1024, 1024);
-directionalLight.shadow.camera.far = 15;
+directionalLight.shadow.camera.far = 50;
 directionalLight.shadow.normalBias = 0.05;
-directionalLight.position.set(5, 5, 5);
+directionalLight.position.set(20, 20, 20);
 scene.add(directionalLight);
 
 const directionalLightControl = gui.addFolder("Directional Light");
-directionalLightControl.add(directionalLight.position, 'x').min(5).max(10).step(0.01);
-directionalLightControl.add(directionalLight.position, 'y').min(5).max(10).step(0.01);
-directionalLightControl.add(directionalLight.position, 'z').min(5).max(10).step(0.01);
-directionalLightControl.add(directionalLight, 'intensity').min(0).max(2).step(0.01);
+directionalLightControl.add(directionalLight.position, 'x').min(5).max(10).step(0.01).listen();
+directionalLightControl.add(directionalLight.position, 'y').min(5).max(10).step(0.01).listen();
+directionalLightControl.add(directionalLight.position, 'z').min(5).max(10).step(0.01).listen();
+directionalLightControl.add(directionalLight, 'intensity').min(0).max(2).step(0.01).listen();
+directionalLightControl.add(GUIOptions, 'lightHelperFlag').name('Light Helper').onChange(lightHelperCallback);
 
-const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 1);
-scene.add(directionalLightHelper);
+const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 2, new THREE.Color('yellow'));
+directionalLightHelper.name = 'lightHelper';
+
+function lightHelperCallback() {
+    if (GUIOptions.lightHelperFlag && !GUIOptions.lightHelperEnabled) {
+        scene.add(directionalLightHelper);
+        GUIOptions.lightHelperEnabled = true;
+    }
+    else if (!GUIOptions.lightHelperFlag && GUIOptions.lightHelperEnabled) {
+        scene.remove(scene.getObjectByName('lightHelper'));
+        GUIOptions.lightHelperEnabled = false;
+    }
+}
 
 /**
  * Sizes
@@ -134,11 +153,11 @@ window.addEventListener('resize', () => {
  * Camera
  */
 // Base camera
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100);
-camera.position.set(0, 0, 4);
+const camera = new THREE.PerspectiveCamera(50, sizes.width / sizes.height, 0.1, 500);
+camera.position.set(0, 0, 30);
 scene.add(camera);
 
-// Controls
+// Camera controls
 const orbitControls = new OrbitControls(camera, canvas);
 orbitControls.enableDamping = false;
 
@@ -160,9 +179,27 @@ renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
+/**
+ * Contents
+ */
+
+// FRONT view
+// TODO: Customization UI
+const numberControl = gui.addFolder("Number Control");
+numberControl.add(GUIOptions, 'numberValue').name('Value').onFinishChange(numberMeshCallback);
+numberControl.add(GUIOptions, 'numberStyle', ['European', 'European No Separator', 'US', 'US No Separator']).name('Style').onFinishChange(numberMeshCallback);
+numberControl.add(GUIOptions, 'numberFont', ['Avenir Black', 'Crash Numbering Serif', 'Nexa Rust Handmade', 'Pecita',
+    'Press Start 2P', 'Roboto Bold']).name('Font').onFinishChange(numberMeshCallback);
+
+let newNumber = new NumberConstruct(parseFloat(GUIOptions.numberValue), GUIOptions.numberStyle, GUIOptions.numberFont);
+newNumber.addNumberMesh(scene, materialTile);
+
+function numberMeshCallback() {
+    newNumber.addNumberMesh(scene, materialTile, GUIOptions.numberValue, GUIOptions.numberStyle, GUIOptions.numberFont);
+}
 
 /**
- * Interaction
+ * Interactions
  */
 window.addEventListener('mousemove', onMouseMove, false);
 
@@ -184,7 +221,8 @@ function onMouseMove(event) {
 const clock = new THREE.Clock();
 
 const tick = () => {
-    const elapsedTime = clock.getElapsedTime();
+
+    //const elapsedTime = clock.getElapsedTime();
 
     // *** Update Controls ***
     orbitControls.update();
@@ -192,24 +230,24 @@ const tick = () => {
     // Update the picking ray with the camera and mouse position
     raycaster.setFromCamera(mouse, camera);
 
-    // Get objects intersecting the picking ray
-    const intersects = raycaster.intersectObjects(meshes);
+    // // Get objects intersecting the picking ray
+    // const intersects = raycaster.intersectObjects(meshes);
 
-    if (intersects.length > 0) {
-        //Closest intersection
-        intersects[0].object.material = materialSelected;
+    // if (intersects.length > 0) {
+    //     //Closest intersection
+    //     intersects[0].object.material = materialSelected;
 
-        for (let i = 0; i < meshes.length; i++) {
-            if (meshes[i].id != intersects[0].object.id) {
-                meshes[i].material = materialEmpty;
-            }
-        }
-    }
-    else {
-        for (let i = 0; i < meshes.length; i++) {
-            meshes[i].material = materialEmpty;
-        }
-    }
+    //     for (let i = 0; i < meshes.length; i++) {
+    //         if (meshes[i].id != intersects[0].object.id) {
+    //             meshes[i].material = materialEmpty;
+    //         }
+    //     }
+    // }
+    // else {
+    //     for (let i = 0; i < meshes.length; i++) {
+    //         meshes[i].material = materialEmpty;
+    //     }
+    // }
 
     // Render
     renderer.render(scene, camera)

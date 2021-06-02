@@ -5,38 +5,63 @@
 import * as THREE from 'three';
 
 export class NumberConstruct {
+
     constructor(numberValue, numberStyle, numberFont) {
+        this.currentMesh = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), new THREE.MeshBasicMaterial({ color: 0xFFFFFF }));
+        this.currentMesh.name = 'currentNumberMesh';
         this.fontLoader = new THREE.FontLoader();
         this.numberText = "";
         this.numberValue = numberValue;
         this.numberStyle = numberStyle;
         this.numberFont = numberFont;
-        this.matchFont();
-        this.numberToText();
+        this.standardNumberSize = 5;
+        this.boundingBoxSize = new THREE.Vector3(0, 0, 0);
     }
 
-    addNumberGeometry(scene, material, position) {
+    addNumberMesh(scene, material, numberValue = this.numberValue, numberStyle = this.numberStyle, numberFont = this.numberFont) {
+
+        scene.remove(scene.getObjectByName('currentNumberMesh'));
+
+        this.numberText = "";
+        this.numberValue = numberValue;
+        this.numberStyle = numberStyle;
+        this.numberFont = numberFont;
+
+        this.matchFont();
+        this.numberToText();
 
         this.fontLoader.load(this.numberFont, function (font) {
             const geometry = new THREE.TextGeometry(this.numberText, {
                 font: font,
-                size: 5,
+                size: this.standardNumberSize,
                 height: 1,
-                curveSegments: 12,
+                curveSegments: 64,
                 bevelEnabled: false,
-                bevelThickness: 1,
-                bevelSize: 1,
+                bevelThickness: 0.1,
+                bevelSize: 0.1,
                 bevelOffset: 0,
                 bevelSegments: 5
             });
 
-            const materialEmpty = new THREE.MeshBasicMaterial({ color: 0x0000FF });
-            materialEmpty.transparent = true;
-            materialEmpty.opacity = 0.5;
+            material.transparent = true;
+            material.opacity = 0.0;
+            geometry.center();
+            this.currentMesh = new THREE.Mesh(geometry, material);
 
-            const meshNumber = new THREE.Mesh(geometry, material);
-            meshNumber.position.set(position.x, position.y, position.z);
-            scene.add(meshNumber);
+            this.currentMesh.position.set(0, 0, 0);
+            this.currentMesh.name = 'currentNumberMesh';
+            scene.add(this.currentMesh);
+
+            let boundingBox = new THREE.Box3();
+            boundingBox.setFromObject(this.currentMesh);
+
+            boundingBox.getSize(this.boundingBoxSize);
+            const scaleFactor = this.standardNumberSize / this.boundingBoxSize.y;
+
+            scene.getObjectByName('currentNumberMesh').scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+            scene.getObjectByName('currentNumberMesh').material.opacity = 1.0;
+
         }.bind(this));
     }
 
@@ -100,30 +125,28 @@ export class NumberConstruct {
             else if (this.numberStyle === "US") {
                 this.numberText = this.numberText.concat(",");
             }
-            else if (this.numberStyle === "No Separator") {
+            else if (this.numberStyle === "European No Separator") {
+                // Doing nothing
+            }
+            else if (this.numberStyle === "US No Separator") {
                 // Doing nothing
             }
             loopCount += 1;
         }
-        if (this.numberStyle !== "No Separator") {
+        if (this.numberStyle === "European" || this.numberStyle === "US") {
             this.numberText = this.numberText.substring(0, this.numberText.length - 1);
         }
 
         const decimal = (this.numberValue - integer).toFixed(2).substring(2);
         if (decimal != 0) {
-            if (this.numberStyle === "European") {
+            if (this.numberStyle === "European" || this.numberStyle === "European No Separator") {
                 this.numberText = this.numberText.concat(",");
             }
-            else if (this.numberStyle === "US") {
+            else if (this.numberStyle === "US" || this.numberStyle === "US No Separator") {
                 this.numberText = this.numberText.concat(".");
             }
-            else if (this.numberStyle === "No Separator") {
-                this.numberText = this.numberText.concat(".");
-            }
+
             this.numberText = this.numberText.concat(decimal);
         }
-
-
-
     }
 }
