@@ -1,9 +1,11 @@
 import './style.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as dat from 'dat.gui';
 
 import { NumberConstruct } from './class_NumberConstruct.js';
+import { Vector3 } from 'three';
 
 /**
  * Base
@@ -18,6 +20,14 @@ let GUIOptions = {
     numberStyle: 'European',
     numberFont: 'Avenir Black',
 };
+
+// State Control
+const states = ['None', 'Room 1', 'Room 2', 'Room 3', 'Room 4'];
+
+let previousState = states[0];
+let currentState = states[1];
+
+let activeButtons = [];
 
 // Canvas
 const canvas = document.querySelector('canvas.webgl');
@@ -34,8 +44,10 @@ const normalTexture = textureLoader.load('/textures/seamless_brick_rock_wall_nor
     //console.log("normalTexture", tex.image.width, tex.image.height);
 });
 
+const gltfLoader = new GLTFLoader();
+
 // Objects
-const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+const boxGeometry = new THREE.BoxGeometry(2, 1, 0.4);
 
 // Materials
 const materialTile = new THREE.MeshStandardMaterial()
@@ -49,18 +61,18 @@ normalTexture.repeat.set(0.5, 0.5); // scale
 materialTile.normalMap = normalTexture;
 materialTile.color = new THREE.Color(0x808080);
 
-const materialEmpty = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
+const materialNumber = new THREE.MeshBasicMaterial({ color: 0x0000FF });
+materialNumber.transparent = true;
+materialNumber.opacity = 0.5;
+
+const materialEmpty = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
 materialEmpty.transparent = true;
-materialEmpty.opacity = 0.2;
+materialEmpty.opacity = 0.7;
 
-const materialSelected = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
+const materialSelected = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
 materialSelected.transparent = true;
-materialSelected.opacity = 0.2;
+materialSelected.opacity = 0.7;
 
-// Meshes
-// const mesh0 = new THREE.Mesh(boxGeometry, materialEmpty);
-// mesh0.position.set(0, 0, 0);
-// scene.add(mesh0);
 
 // const mesh1 = new THREE.Mesh(boxGeometry, materialEmpty);
 // mesh1.position.set(0, 0, 1);
@@ -90,7 +102,6 @@ materialSelected.opacity = 0.2;
 // mesh7.position.set(1, 1, 1);
 // scene.add(mesh7);
 
-// const meshes = [mesh0, mesh1, mesh2, mesh3, mesh4, mesh5, mesh6, mesh7];
 
 /**
  * Lights
@@ -98,23 +109,28 @@ materialSelected.opacity = 0.2;
 const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.5);
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
+const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 5.0);
 directionalLight.castShadow = true;
 directionalLight.shadow.mapSize.set(1024, 1024);
-directionalLight.shadow.camera.far = 50;
+directionalLight.shadow.camera.far = 100;
+directionalLight.shadow.camera.width = 51200;
+directionalLight.shadow.camera.height = 51200;
 directionalLight.shadow.normalBias = 0.05;
-directionalLight.position.set(20, 20, 20);
+directionalLight.position.set(20, 50, 20);
 scene.add(directionalLight);
 
 const directionalLightControl = gui.addFolder("Directional Light");
-directionalLightControl.add(directionalLight.position, 'x').min(5).max(10).step(0.01).listen();
-directionalLightControl.add(directionalLight.position, 'y').min(5).max(10).step(0.01).listen();
-directionalLightControl.add(directionalLight.position, 'z').min(5).max(10).step(0.01).listen();
-directionalLightControl.add(directionalLight, 'intensity').min(0).max(2).step(0.01).listen();
+directionalLightControl.add(directionalLight.position, 'x').min(0).max(50).step(0.01).listen();
+directionalLightControl.add(directionalLight.position, 'y').min(0).max(100).step(0.01).listen();
+directionalLightControl.add(directionalLight.position, 'z').min(0).max(50).step(0.01).listen();
+directionalLightControl.add(directionalLight, 'intensity').min(0).max(10).step(0.01).listen();
 directionalLightControl.add(GUIOptions, 'lightHelperFlag').name('Light Helper').onChange(lightHelperCallback);
 
 const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 2, new THREE.Color('yellow'));
 directionalLightHelper.name = 'lightHelper';
+
+const directionalLightCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
+scene.add(directionalLightCameraHelper);
 
 function lightHelperCallback() {
     if (GUIOptions.lightHelperFlag && !GUIOptions.lightHelperEnabled) {
@@ -154,12 +170,13 @@ window.addEventListener('resize', () => {
  */
 // Base camera
 const camera = new THREE.PerspectiveCamera(50, sizes.width / sizes.height, 0.1, 500);
-camera.position.set(0, 0, 30);
+camera.position.set(-20, 7, -20);
 scene.add(camera);
 
 // Camera controls
 const orbitControls = new OrbitControls(camera, canvas);
 orbitControls.enableDamping = false;
+orbitControls.target = new THREE.Vector3(-20, 7, -50);
 
 /**
  * Renderer
@@ -169,19 +186,48 @@ const renderer = new THREE.WebGLRenderer({
     alpha: true,
     antialias: true
 })
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFShadowMap;
-// renderer.physicallyCorrectLights = true;
-renderer.outputEncoding = THREE.sRGBEncoding;
-// renderer.toneMapping = THREE.ReinhardToneMapping;
-// renderer.toneMappingExposure = 1.5;
 
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.physicallyCorrectLights = true;
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const rendererControl = gui.addFolder("Renderer Properties");
+rendererControl.add(renderer, 'toneMappingExposure').min(0).max(2).step(0.01);
+
+/**
+ * Update all materials
+ */
+const updateAllMaterials = () => {
+    scene.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
+            // add environment map
+            child.material.needsUpdate = true
+            child.castShadow = true;
+            child.receiveShadow = true;
+        }
+    })
+}
 
 /**
  * Contents
  */
+// Gallery environment
+gltfLoader.load(
+    '/models/NumberGallery/NumberGallery.gltf',
+    (gltf) => {
+        console.log("Gallery models loaded!");
+        gltf.scene.scale.set(5, 5, 5);
+        gltf.scene.position.set(0, 0, 0);
+        scene.add(gltf.scene);
+
+        updateAllMaterials();
+    }
+)
 
 // FRONT view
 // TODO: Customization UI
@@ -191,16 +237,31 @@ numberControl.add(GUIOptions, 'numberStyle', ['European', 'European No Separator
 numberControl.add(GUIOptions, 'numberFont', ['Avenir Black', 'Crash Numbering Serif', 'Nexa Rust Handmade', 'Pecita',
     'Press Start 2P', 'Roboto Bold']).name('Font').onFinishChange(numberMeshCallback);
 
-let newNumber = new NumberConstruct(parseFloat(GUIOptions.numberValue), GUIOptions.numberStyle, GUIOptions.numberFont);
-newNumber.addNumberMesh(scene, materialTile);
+const newNumber = new NumberConstruct(parseFloat(GUIOptions.numberValue), GUIOptions.numberStyle, GUIOptions.numberFont);
 
 function numberMeshCallback() {
-    newNumber.addNumberMesh(scene, materialTile, GUIOptions.numberValue, GUIOptions.numberStyle, GUIOptions.numberFont);
+    newNumber.addNumberMesh(scene, materialNumber, GUIOptions.numberValue, GUIOptions.numberStyle, GUIOptions.numberFont);
 }
+
 
 /**
  * Interactions
  */
+
+function enterNewState() {
+    
+    newNumber.addNumberMesh(scene, materialNumber);
+
+    //Add Navigation Buttons
+    const nextStepButton = new THREE.Mesh(boxGeometry, materialEmpty);
+    const newPos = newNumber.getNumberMeshPos();
+    
+    nextStepButton.position.set(newPos.x + 5, newPos.y - 4, newPos.z + 10);
+    
+    activeButtons.push(nextStepButton);
+    scene.add(nextStepButton);
+}
+
 window.addEventListener('mousemove', onMouseMove, false);
 
 // Raycasting for mouse picking
@@ -227,27 +288,32 @@ const tick = () => {
     // *** Update Controls ***
     orbitControls.update();
 
+    if (previousState !== currentState){
+        enterNewState();
+        previousState = currentState;
+    }
+
     // Update the picking ray with the camera and mouse position
     raycaster.setFromCamera(mouse, camera);
 
-    // // Get objects intersecting the picking ray
-    // const intersects = raycaster.intersectObjects(meshes);
+    // Get objects intersecting the picking ray
+    const intersects = raycaster.intersectObjects(activeButtons);
 
-    // if (intersects.length > 0) {
-    //     //Closest intersection
-    //     intersects[0].object.material = materialSelected;
+    if (intersects.length > 0) {
+        //Closest intersection
+        intersects[0].object.material = materialSelected;
 
-    //     for (let i = 0; i < meshes.length; i++) {
-    //         if (meshes[i].id != intersects[0].object.id) {
-    //             meshes[i].material = materialEmpty;
-    //         }
-    //     }
-    // }
-    // else {
-    //     for (let i = 0; i < meshes.length; i++) {
-    //         meshes[i].material = materialEmpty;
-    //     }
-    // }
+        for (let i = 0; i < activeButtons.length; i++) {
+            if (activeButtons[i].id != intersects[0].object.id) {
+                activeButtons[i].material = materialEmpty;
+            }
+        }
+    }
+    else {
+        for (let i = 0; i < activeButtons.length; i++) {
+            activeButtons[i].material = materialEmpty;
+        }
+    }
 
     // Render
     renderer.render(scene, camera)

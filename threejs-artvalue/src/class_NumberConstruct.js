@@ -14,8 +14,18 @@ export class NumberConstruct {
         this.numberValue = numberValue;
         this.numberStyle = numberStyle;
         this.numberFont = numberFont;
-        this.standardNumberSize = 5;
+        this.standardNumberSize = 3;
         this.boundingBoxSize = new THREE.Vector3(0, 0, 0);
+        this.currentPos = new THREE.Vector3(-20, 7, -50); // initial value
+    }
+
+    setNumberMeshPos(newPos){
+        this.currentPos.set(newPos.x, newPos.y, newPos.z);
+        this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
+    }
+
+    getNumberMeshPos(){
+        return this.currentPos;
     }
 
     addNumberMesh(scene, material, numberValue = this.numberValue, numberStyle = this.numberStyle, numberFont = this.numberFont) {
@@ -48,7 +58,10 @@ export class NumberConstruct {
             geometry.center();
             this.currentMesh = new THREE.Mesh(geometry, material);
 
-            this.currentMesh.position.set(0, 0, 0);
+            this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z); 
+
+            console.log(this.getNumberMeshPos());
+
             this.currentMesh.name = 'currentNumberMesh';
             scene.add(this.currentMesh);
 
@@ -60,7 +73,7 @@ export class NumberConstruct {
 
             scene.getObjectByName('currentNumberMesh').scale.set(scaleFactor, scaleFactor, scaleFactor);
 
-            scene.getObjectByName('currentNumberMesh').material.opacity = 1.0;
+            scene.getObjectByName('currentNumberMesh').material.opacity = 0.5;
 
         }.bind(this));
     }
