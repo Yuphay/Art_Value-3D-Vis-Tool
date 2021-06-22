@@ -14,18 +14,24 @@ export class NumberConstruct {
         this.numberValue = numberValue;
         this.numberStyle = numberStyle;
         this.numberFont = numberFont;
-        this.standardNumberSize = 3;
+        this.standardNumberSize = 2;
         this.boundingBoxSize = new THREE.Vector3(0, 0, 0);
         this.currentPos = new THREE.Vector3(-20, 7, -50); // initial value
+        this.unitCubeGroup = new THREE.Group();
+        this.cubeSideLength = 0;
     }
 
-    setNumberMeshPos(newPos){
+    setNumberMeshPos(newPos) {
         this.currentPos.set(newPos.x, newPos.y, newPos.z);
         this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
     }
 
-    getNumberMeshPos(){
+    getNumberMeshPos() {
         return this.currentPos;
+    }
+
+    getCubeSideLength(){
+        return this.cubeSideLength;
     }
 
     addNumberMesh(scene, material, numberValue = this.numberValue, numberStyle = this.numberStyle, numberFont = this.numberFont) {
@@ -58,9 +64,7 @@ export class NumberConstruct {
             geometry.center();
             this.currentMesh = new THREE.Mesh(geometry, material);
 
-            this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z); 
-
-            console.log(this.getNumberMeshPos());
+            this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
 
             this.currentMesh.name = 'currentNumberMesh';
             scene.add(this.currentMesh);
@@ -161,5 +165,33 @@ export class NumberConstruct {
 
             this.numberText = this.numberText.concat(decimal);
         }
+    }
+
+    generateCubeConstraint(scene, unitCubeNumber, material) {
+
+        
+        this.cubeSideLength = this.boundingBoxSize.x + 2;
+        let unitCubeSideLength = this.cubeSideLength / unitCubeNumber;
+        const unitCubeGeometry = new THREE.BoxGeometry(unitCubeSideLength, unitCubeSideLength, unitCubeSideLength);
+        this.unitCubeGroup.clear();
+        for (let k = 0; k < unitCubeNumber; k++) {
+            for (let j = 0; j < unitCubeNumber; j++) {
+                for (let i = 0; i < unitCubeNumber; i++) {
+                    let mesh = new THREE.Mesh(unitCubeGeometry, material);
+                    mesh.position.x = this.currentPos.x + (i + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber;
+                    mesh.position.y = this.currentPos.y + (j + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber;
+                    mesh.position.z = this.currentPos.z + (k + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber;;
+
+                    this.unitCubeGroup.add(mesh);
+                }
+            }
+        }
+        scene.add(this.unitCubeGroup);
+
+        scene.getObjectByName('currentNumberMesh').scale.set(1, 1, this.cubeSideLength + 1);
+    }
+
+    removeUnitCubeGroup(scene) {
+        scene.remove(this.unitCubeGroup);
     }
 }

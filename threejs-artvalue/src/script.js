@@ -65,6 +65,10 @@ const materialNumber = new THREE.MeshBasicMaterial({ color: 0x0000FF });
 materialNumber.transparent = true;
 materialNumber.opacity = 0.5;
 
+const materialCube = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
+materialCube.transparent = true;
+materialCube.opacity = 0.2;
+
 const materialEmpty = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
 materialEmpty.transparent = true;
 materialEmpty.opacity = 0.7;
@@ -170,7 +174,7 @@ window.addEventListener('resize', () => {
  */
 // Base camera
 const camera = new THREE.PerspectiveCamera(50, sizes.width / sizes.height, 0.1, 500);
-camera.position.set(-20, 7, -20);
+camera.position.set(-20, 7, -30);
 scene.add(camera);
 
 // Camera controls
@@ -249,20 +253,47 @@ function numberMeshCallback() {
  */
 
 function enterNewState() {
-    
-    newNumber.addNumberMesh(scene, materialNumber);
+
+    console.log("New state: " + currentState);
+
+    if (previousState === states[0]) {
+        newNumber.addNumberMesh(scene, materialNumber);
+    }
+    else if (currentState === states[1]) {
+        numberMeshCallback();
+        if (previousState === states[2]) {
+            newNumber.removeUnitCubeGroup(scene);
+        }
+        newNumber.setNumberMeshPos(new THREE.Vector3(-20, 7, -50));
+        camera.position.set(newNumber.getNumberMeshPos().x, newNumber.getNumberMeshPos().y, newNumber.getNumberMeshPos().z + 20);
+        orbitControls.target = newNumber.getNumberMeshPos();
+    }
+    else if (currentState === states[2]) {
+        newNumber.setNumberMeshPos(new THREE.Vector3(-20, 10, -130));
+        newNumber.generateCubeConstraint(scene, 24, materialCube);
+
+        camera.position.set(newNumber.getNumberMeshPos().x, newNumber.getNumberMeshPos().y, newNumber.getNumberMeshPos().z +
+            newNumber.getCubeSideLength() / 2 + 20);
+        orbitControls.target = newNumber.getNumberMeshPos();
+        
+    }
 
     //Add Navigation Buttons
     const nextStepButton = new THREE.Mesh(boxGeometry, materialEmpty);
-    const newPos = newNumber.getNumberMeshPos();
-    
-    nextStepButton.position.set(newPos.x + 5, newPos.y - 4, newPos.z + 10);
-    
-    activeButtons.push(nextStepButton);
+    const previousStepButton = new THREE.Mesh(boxGeometry, materialEmpty);
+
+    nextStepButton.position.set(camera.position.x + 5, camera.position.y - 4, camera.position.z - 15);
+    previousStepButton.position.set(camera.position.x - 5, camera.position.y - 4, camera.position.z - 15);
+
+    nextStepButton.name = 'nextStepButton';
+    previousStepButton.name = 'previousStepButton';
+    activeButtons.push(previousStepButton, nextStepButton);
     scene.add(nextStepButton);
+    scene.add(previousStepButton);
 }
 
 window.addEventListener('mousemove', onMouseMove, false);
+window.addEventListener('click', onClick, false);
 
 // Raycasting for mouse picking
 const raycaster = new THREE.Raycaster();
@@ -272,8 +303,30 @@ function onMouseMove(event) {
 
     // calculate mouse position in normalized device coordinates
     // (-1 to +1) for both components
+
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+}
+
+function onClick(event) {
+    if (scene.getObjectByName('nextStepButton').material === materialSelected) {
+        if (states.indexOf(currentState) < states.length - 1) {
+            currentState = states[states.indexOf(currentState) + 1];
+            activeButtons.pop();
+            activeButtons.pop();
+            scene.remove(scene.getObjectByName('previousStepButton'));
+            scene.remove(scene.getObjectByName('nextStepButton'));
+        }
+    }
+    else if (scene.getObjectByName('previousStepButton').material === materialSelected) {
+        if (states.indexOf(currentState) > 1) {
+            currentState = states[states.indexOf(currentState) - 1];
+            activeButtons.pop();
+            activeButtons.pop();
+            scene.remove(scene.getObjectByName('previousStepButton'));
+            scene.remove(scene.getObjectByName('nextStepButton'));
+        }
+    }
 }
 
 /**
@@ -288,7 +341,7 @@ const tick = () => {
     // *** Update Controls ***
     orbitControls.update();
 
-    if (previousState !== currentState){
+    if (previousState !== currentState) {
         enterNewState();
         previousState = currentState;
     }
