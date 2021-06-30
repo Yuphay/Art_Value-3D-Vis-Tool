@@ -19,15 +19,28 @@ let GUIOptions = {
     numberValue: '1234.56',
     numberStyle: 'European',
     numberFont: 'Avenir Black',
+
+    devMode: true
 };
 
 // State Control
+let devMode = true;
+
+const testingControl = gui.addFolder("Testing");
+testingControl.add(GUIOptions, 'devMode').name('Dev Mode').onChange(devModeCallback);
+
+function devModeCallback() {
+    devMode = GUIOptions.devMode;
+}
+
 const states = ['None', 'Room 1', 'Room 2', 'Room 3', 'Room 4'];
 
 let previousState = states[0];
 let currentState = states[1];
 
 let activeButtons = [];
+let environmentObjects = [];
+
 
 // Canvas
 const canvas = document.querySelector('canvas.webgl');
@@ -227,6 +240,7 @@ gltfLoader.load(
         console.log("Gallery models loaded!");
         gltf.scene.scale.set(5, 5, 5);
         gltf.scene.position.set(0, 0, 0);
+        environmentObjects.push(gltf.scene);
         scene.add(gltf.scene);
 
         updateAllMaterials();
@@ -244,7 +258,9 @@ numberControl.add(GUIOptions, 'numberFont', ['Avenir Black', 'Crash Numbering Se
 const newNumber = new NumberConstruct(parseFloat(GUIOptions.numberValue), GUIOptions.numberStyle, GUIOptions.numberFont);
 
 function numberMeshCallback() {
-    newNumber.addNumberMesh(scene, materialNumber, GUIOptions.numberValue, GUIOptions.numberStyle, GUIOptions.numberFont);
+    if (currentState == states[1]) {
+        newNumber.addNumberMesh(scene, materialNumber, GUIOptions.numberValue, GUIOptions.numberStyle, GUIOptions.numberFont);
+    }
 }
 
 
@@ -275,7 +291,7 @@ function enterNewState() {
         camera.position.set(newNumber.getNumberMeshPos().x, newNumber.getNumberMeshPos().y, newNumber.getNumberMeshPos().z +
             newNumber.getCubeSideLength() / 2 + 20);
         orbitControls.target = newNumber.getNumberMeshPos();
-        
+
     }
 
     //Add Navigation Buttons
@@ -296,8 +312,11 @@ window.addEventListener('mousemove', onMouseMove, false);
 window.addEventListener('click', onClick, false);
 
 // Raycasting for mouse picking
-const raycaster = new THREE.Raycaster();
+const mouseRayCaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
+
+// Raycasting for camera control
+const cameraRayCaster = new THREE.Raycaster();
 
 function onMouseMove(event) {
 
@@ -347,17 +366,17 @@ const tick = () => {
     }
 
     // Update the picking ray with the camera and mouse position
-    raycaster.setFromCamera(mouse, camera);
+    mouseRayCaster.setFromCamera(mouse, camera);
 
     // Get objects intersecting the picking ray
-    const intersects = raycaster.intersectObjects(activeButtons);
+    const mousePickIntersects = mouseRayCaster.intersectObjects(activeButtons);
 
-    if (intersects.length > 0) {
+    if (mousePickIntersects.length > 0) {
         //Closest intersection
-        intersects[0].object.material = materialSelected;
+        mousePickIntersects[0].object.material = materialSelected;
 
         for (let i = 0; i < activeButtons.length; i++) {
-            if (activeButtons[i].id != intersects[0].object.id) {
+            if (activeButtons[i].id != mousePickIntersects[0].object.id) {
                 activeButtons[i].material = materialEmpty;
             }
         }
@@ -365,6 +384,17 @@ const tick = () => {
     else {
         for (let i = 0; i < activeButtons.length; i++) {
             activeButtons[i].material = materialEmpty;
+        }
+    }
+
+    if (!devMode) {
+        cameraRayCaster.set(orbitControls.target, new THREE.Vector3(camera.position.x - orbitControls.target.x,
+            camera.position.y - orbitControls.target.y, camera.position.z - orbitControls.target.z).normalize());
+
+        const cameraRayIntersects = cameraRayCaster.intersectObjects(environmentObjects, true);
+
+        if (cameraRayIntersects.length > 0) {
+            orbitControls.maxDistance = cameraRayIntersects[0].distance - 1;
         }
     }
 
