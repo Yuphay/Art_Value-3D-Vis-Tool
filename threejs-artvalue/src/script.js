@@ -80,11 +80,15 @@ materialNumber.opacity = 0.5;
 
 const materialCube = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
 materialCube.transparent = true;
-materialCube.opacity = 0.2;
+materialCube.opacity = 0.5;
 
-const materialEmpty = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
+const materialEmpty = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
 materialEmpty.transparent = true;
-materialEmpty.opacity = 0.7;
+materialEmpty.opacity = 0;
+
+const materialUnselected = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
+materialUnselected.transparent = true;
+materialUnselected.opacity = 0.7;
 
 const materialSelected = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
 materialSelected.transparent = true;
@@ -186,7 +190,8 @@ window.addEventListener('resize', () => {
  * Camera
  */
 // Base camera
-const camera = new THREE.PerspectiveCamera(50, sizes.width / sizes.height, 0.1, 500);
+const camera = new THREE.PerspectiveCamera(40, sizes.width / sizes.height, 0.1, 500);
+//const camera = new THREE.OrthographicCamera( sizes.width / - 2, sizes.width / 2, sizes.height / 2, sizes.height / - 2, 1, 1000 );
 camera.position.set(-20, 7, -30);
 scene.add(camera);
 
@@ -258,7 +263,7 @@ numberControl.add(GUIOptions, 'numberFont', ['Avenir Black', 'Crash Numbering Se
 const newNumber = new NumberConstruct(parseFloat(GUIOptions.numberValue), GUIOptions.numberStyle, GUIOptions.numberFont);
 
 function numberMeshCallback() {
-    if (currentState == states[1]) {
+    if (currentState === states[1]) {
         newNumber.addNumberMesh(scene, materialNumber, GUIOptions.numberValue, GUIOptions.numberStyle, GUIOptions.numberFont);
     }
 }
@@ -280,23 +285,24 @@ function enterNewState() {
         if (previousState === states[2]) {
             newNumber.removeUnitCubeGroup(scene);
         }
-        newNumber.setNumberMeshPos(new THREE.Vector3(-20, 7, -50));
+        newNumber.setNumberMeshPos(new THREE.Vector3(-20, 10, -50));
         camera.position.set(newNumber.getNumberMeshPos().x, newNumber.getNumberMeshPos().y, newNumber.getNumberMeshPos().z + 20);
         orbitControls.target = newNumber.getNumberMeshPos();
     }
     else if (currentState === states[2]) {
         newNumber.setNumberMeshPos(new THREE.Vector3(-20, 10, -130));
-        newNumber.generateCubeConstraint(scene, 24, materialCube);
+        newNumber.generateCubeConstraint(scene, 30, materialCube, materialEmpty);
 
-        camera.position.set(newNumber.getNumberMeshPos().x, newNumber.getNumberMeshPos().y, newNumber.getNumberMeshPos().z +
-            newNumber.getCubeSideLength() / 2 + 20);
+        camera.position.set(newNumber.getNumberMeshPos().x,
+            newNumber.getNumberMeshPos().y,
+            newNumber.getNumberMeshPos().z + newNumber.getCubeSideLength() / 2 + 20);
+
         orbitControls.target = newNumber.getNumberMeshPos();
-
     }
 
     //Add Navigation Buttons
-    const nextStepButton = new THREE.Mesh(boxGeometry, materialEmpty);
-    const previousStepButton = new THREE.Mesh(boxGeometry, materialEmpty);
+    const nextStepButton = new THREE.Mesh(boxGeometry, materialUnselected);
+    const previousStepButton = new THREE.Mesh(boxGeometry, materialUnselected);
 
     nextStepButton.position.set(camera.position.x + 5, camera.position.y - 4, camera.position.z - 15);
     previousStepButton.position.set(camera.position.x - 5, camera.position.y - 4, camera.position.z - 15);
@@ -377,13 +383,13 @@ const tick = () => {
 
         for (let i = 0; i < activeButtons.length; i++) {
             if (activeButtons[i].id != mousePickIntersects[0].object.id) {
-                activeButtons[i].material = materialEmpty;
+                activeButtons[i].material = materialUnselected;
             }
         }
     }
     else {
         for (let i = 0; i < activeButtons.length; i++) {
-            activeButtons[i].material = materialEmpty;
+            activeButtons[i].material = materialUnselected;
         }
     }
 

@@ -19,6 +19,10 @@ export class NumberConstruct {
         this.currentPos = new THREE.Vector3(-20, 7, -50); // initial value
         this.unitCubeGroup = new THREE.Group();
         this.cubeSideLength = 0;
+        this.collisionRayCaster0 = new THREE.Raycaster();
+        this.collisionRayCaster1 = new THREE.Raycaster();
+        this.collisionRayCaster2 = new THREE.Raycaster();
+        this.collisionRayCaster3 = new THREE.Raycaster();
     }
 
     setNumberMeshPos(newPos) {
@@ -30,13 +34,13 @@ export class NumberConstruct {
         return this.currentPos;
     }
 
-    getCubeSideLength(){
+    getCubeSideLength() {
         return this.cubeSideLength;
     }
 
     addNumberMesh(scene, material, numberValue = this.numberValue, numberStyle = this.numberStyle, numberFont = this.numberFont) {
 
-        scene.remove(scene.getObjectByName('currentNumberMesh'));
+        scene.remove(this.currentMesh);
 
         this.numberText = "";
         this.numberValue = numberValue;
@@ -67,7 +71,6 @@ export class NumberConstruct {
             this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
 
             this.currentMesh.name = 'currentNumberMesh';
-            scene.add(this.currentMesh);
 
             let boundingBox = new THREE.Box3();
             boundingBox.setFromObject(this.currentMesh);
@@ -75,9 +78,11 @@ export class NumberConstruct {
             boundingBox.getSize(this.boundingBoxSize);
             const scaleFactor = this.standardNumberSize / this.boundingBoxSize.y;
 
-            scene.getObjectByName('currentNumberMesh').scale.set(scaleFactor, scaleFactor, scaleFactor);
+            this.currentMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
-            scene.getObjectByName('currentNumberMesh').material.opacity = 0.5;
+            this.currentMesh.material.opacity = 0.5;
+
+            scene.add(this.currentMesh);
 
         }.bind(this));
     }
@@ -167,17 +172,16 @@ export class NumberConstruct {
         }
     }
 
-    generateCubeConstraint(scene, unitCubeNumber, material) {
+    generateCubeConstraint(scene, unitCubeNumber, materialCube, materialEmpty) {
 
-        
-        this.cubeSideLength = this.boundingBoxSize.x + 2;
+        this.cubeSideLength = this.boundingBoxSize.x + 1;
         let unitCubeSideLength = this.cubeSideLength / unitCubeNumber;
         const unitCubeGeometry = new THREE.BoxGeometry(unitCubeSideLength, unitCubeSideLength, unitCubeSideLength);
         this.unitCubeGroup.clear();
         for (let k = 0; k < unitCubeNumber; k++) {
             for (let j = 0; j < unitCubeNumber; j++) {
                 for (let i = 0; i < unitCubeNumber; i++) {
-                    let mesh = new THREE.Mesh(unitCubeGeometry, material);
+                    let mesh = new THREE.Mesh(unitCubeGeometry, materialCube);
                     mesh.position.x = this.currentPos.x + (i + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber;
                     mesh.position.y = this.currentPos.y + (j + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber;
                     mesh.position.z = this.currentPos.z + (k + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber;;
@@ -186,9 +190,30 @@ export class NumberConstruct {
                 }
             }
         }
-        scene.add(this.unitCubeGroup);
 
-        scene.getObjectByName('currentNumberMesh').scale.set(1, 1, this.cubeSideLength + 1);
+        this.currentMesh.material = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
+
+        this.currentMesh.scale.set(1, 1, this.cubeSideLength + 1);
+
+        this.currentMesh.updateMatrix();
+
+        for (let i = 0; i < this.unitCubeGroup.children.length; i++) {
+            this.collisionRayCaster0.set(new THREE.Vector3(
+                this.unitCubeGroup.children[i].position.x - unitCubeSideLength / 2,
+                this.unitCubeGroup.children[i].position.y + unitCubeSideLength / 2,
+                this.unitCubeGroup.children[i].position.z - unitCubeSideLength / 2),
+                new THREE.Vector3(0, 0, 1));
+
+            //this.collisionRayCaster0.far = unitCubeSideLength;
+
+            const collisionRayIntersects = this.collisionRayCaster0.intersectObjects([this.currentMesh]);
+
+            if (collisionRayIntersects.length > 0) {
+                this.unitCubeGroup.children[i].material = materialEmpty;
+            }
+        }
+
+        scene.add(this.unitCubeGroup);
     }
 
     removeUnitCubeGroup(scene) {
