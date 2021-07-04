@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as dat from 'dat.gui';
+import Stats from 'stats.js/src/Stats.js';
 
 import { NumberConstruct } from './class_NumberConstruct.js';
 import { Vector3 } from 'three';
@@ -10,29 +11,45 @@ import { Vector3 } from 'three';
 /**
  * Base
  */
+
 // Debug
 const gui = new dat.GUI();
 
 let GUIOptions = {
     lightHelperFlag: false,
     lightHelperEnabled: false,
-    numberValue: '1234.56',
+    numberValue: '1234',
     numberStyle: 'European',
     numberFont: 'Avenir Black',
 
     devMode: true
 };
 
-// State Control
 let devMode = true;
 
 const testingControl = gui.addFolder("Testing");
 testingControl.add(GUIOptions, 'devMode').name('Dev Mode').onChange(devModeCallback);
+testingControl.open();
 
 function devModeCallback() {
     devMode = GUIOptions.devMode;
+    if (devMode === true) {
+        document.body.appendChild(stats.domElement);
+    }
+    else {
+        document.body.removeChild(stats.domElement);
+    }
 }
 
+let stats = new Stats();
+stats.setMode(0);
+stats.domElement.style.position = 'absolute';
+stats.domElement.style.left = '0';
+stats.domElement.style.top = '0';
+
+document.body.appendChild(stats.domElement);
+
+// State Control
 const states = ['None', 'Room 1', 'Room 2', 'Room 3', 'Room 4'];
 
 let previousState = states[0];
@@ -127,18 +144,17 @@ materialSelected.opacity = 0.7;
 /**
  * Lights
  */
-const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.5);
+const ambientLight = new THREE.AmbientLight(0xFFFFFF, 1);
 scene.add(ambientLight);
 
 const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 5.0);
 directionalLight.castShadow = true;
 directionalLight.shadow.mapSize.set(1024, 1024);
 directionalLight.shadow.camera.far = 100;
-directionalLight.shadow.camera.width = 51200;
-directionalLight.shadow.camera.height = 51200;
+//directionalLight.shadow.camera.width = 1024;
+//directionalLight.shadow.camera.height = 1024;
 directionalLight.shadow.normalBias = 0.05;
-directionalLight.position.set(20, 50, 20);
-scene.add(directionalLight);
+directionalLight.position.set(-20, 8, -100);
 
 const directionalLightControl = gui.addFolder("Directional Light");
 directionalLightControl.add(directionalLight.position, 'x').min(0).max(50).step(0.01).listen();
@@ -192,13 +208,13 @@ window.addEventListener('resize', () => {
 // Base camera
 const camera = new THREE.PerspectiveCamera(40, sizes.width / sizes.height, 0.1, 500);
 //const camera = new THREE.OrthographicCamera( sizes.width / - 2, sizes.width / 2, sizes.height / 2, sizes.height / - 2, 1, 1000 );
-camera.position.set(-20, 7, -30);
+camera.position.set(-20, 8, -30);
 scene.add(camera);
 
 // Camera controls
 const orbitControls = new OrbitControls(camera, canvas);
 orbitControls.enableDamping = false;
-orbitControls.target = new THREE.Vector3(-20, 7, -50);
+orbitControls.target = new THREE.Vector3(-20, 8, -50);
 
 /**
  * Renderer
@@ -275,29 +291,40 @@ function numberMeshCallback() {
 
 function enterNewState() {
 
+    scene.remove(directionalLight);
+
     console.log("New state: " + currentState);
 
     if (previousState === states[0]) {
         newNumber.addNumberMesh(scene, materialNumber);
     }
     else if (currentState === states[1]) {
-        numberMeshCallback();
+        //newNumber.addNumberMesh(scene, materialNumber, GUIOptions.numberValue, GUIOptions.numberStyle, GUIOptions.numberFont);
         if (previousState === states[2]) {
+            newNumber.currentMesh.scale.set(1, 1, 1);
             newNumber.removeUnitCubeGroup(scene);
         }
-        newNumber.setNumberMeshPos(new THREE.Vector3(-20, 10, -50));
+        newNumber.updateNumberMeshPos(scene, new THREE.Vector3(-20, 8, -50));
         camera.position.set(newNumber.getNumberMeshPos().x, newNumber.getNumberMeshPos().y, newNumber.getNumberMeshPos().z + 20);
         orbitControls.target = newNumber.getNumberMeshPos();
     }
     else if (currentState === states[2]) {
-        newNumber.setNumberMeshPos(new THREE.Vector3(-20, 10, -130));
-        newNumber.generateCubeConstraint(scene, 30, materialCube, materialEmpty);
+        newNumber.updateNumberMeshPos(scene, new THREE.Vector3(-20, 8, -130));
+        newNumber.generateCubeConstraint(scene, 40, materialCube, materialEmpty);
 
         camera.position.set(newNumber.getNumberMeshPos().x,
             newNumber.getNumberMeshPos().y,
             newNumber.getNumberMeshPos().z + newNumber.getCubeSideLength() / 2 + 20);
 
         orbitControls.target = newNumber.getNumberMeshPos();
+
+        // Update Lighting
+        const targetObject = new THREE.Object3D();
+        targetObject.position.set(newNumber.currentMesh.position.x, newNumber.currentMesh.position.y, newNumber.currentMesh.position.z);
+        scene.add(targetObject);
+        directionalLight.target = targetObject;
+
+        scene.add(directionalLight);
     }
 
     //Add Navigation Buttons
@@ -406,6 +433,7 @@ const tick = () => {
 
     // Render
     renderer.render(scene, camera)
+    stats.update();
 
     // Call tick again on the next frame
     window.requestAnimationFrame(tick)

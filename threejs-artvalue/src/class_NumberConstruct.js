@@ -7,6 +7,7 @@ import * as THREE from 'three';
 export class NumberConstruct {
 
     constructor(numberValue, numberStyle, numberFont) {
+        this.currentGeometry;
         this.currentMesh = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), new THREE.MeshBasicMaterial({ color: 0xFFFFFF }));
         this.currentMesh.name = 'currentNumberMesh';
         this.fontLoader = new THREE.FontLoader();
@@ -16,7 +17,7 @@ export class NumberConstruct {
         this.numberFont = numberFont;
         this.standardNumberSize = 2;
         this.boundingBoxSize = new THREE.Vector3(0, 0, 0);
-        this.currentPos = new THREE.Vector3(-20, 7, -50); // initial value
+        this.currentPos = new THREE.Vector3(-20, 8, -50); // initial value
         this.unitCubeGroup = new THREE.Group();
         this.cubeSideLength = 0;
         this.collisionRayCaster0 = new THREE.Raycaster();
@@ -25,9 +26,12 @@ export class NumberConstruct {
         this.collisionRayCaster3 = new THREE.Raycaster();
     }
 
-    setNumberMeshPos(newPos) {
+    updateNumberMeshPos(scene, newPos) {
+        scene.remove(this.currentMesh);
         this.currentPos.set(newPos.x, newPos.y, newPos.z);
         this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
+        this.currentMesh.updateMatrix();
+        scene.add(this.currentMesh);
     }
 
     getNumberMeshPos() {
@@ -51,7 +55,7 @@ export class NumberConstruct {
         this.numberToText();
 
         this.fontLoader.load(this.numberFont, function (font) {
-            const geometry = new THREE.TextGeometry(this.numberText, {
+            this.currentGeometry = new THREE.TextGeometry(this.numberText, {
                 font: font,
                 size: this.standardNumberSize,
                 height: 1,
@@ -65,23 +69,24 @@ export class NumberConstruct {
 
             material.transparent = true;
             material.opacity = 0.0;
-            geometry.center();
-            this.currentMesh = new THREE.Mesh(geometry, material);
+            this.currentGeometry.center();
+            this.currentMesh = new THREE.Mesh(this.currentGeometry, material);
 
             this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
-
+    
             this.currentMesh.name = 'currentNumberMesh';
-
+            
             let boundingBox = new THREE.Box3();
             boundingBox.setFromObject(this.currentMesh);
-
+    
             boundingBox.getSize(this.boundingBoxSize);
+    
             const scaleFactor = this.standardNumberSize / this.boundingBoxSize.y;
-
+    
             this.currentMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
-
+    
             this.currentMesh.material.opacity = 0.5;
-
+    
             scene.add(this.currentMesh);
 
         }.bind(this));
@@ -178,6 +183,7 @@ export class NumberConstruct {
         let unitCubeSideLength = this.cubeSideLength / unitCubeNumber;
         const unitCubeGeometry = new THREE.BoxGeometry(unitCubeSideLength, unitCubeSideLength, unitCubeSideLength);
         this.unitCubeGroup.clear();
+
         for (let k = 0; k < unitCubeNumber; k++) {
             for (let j = 0; j < unitCubeNumber; j++) {
                 for (let i = 0; i < unitCubeNumber; i++) {
@@ -185,17 +191,15 @@ export class NumberConstruct {
                     mesh.position.x = this.currentPos.x + (i + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber;
                     mesh.position.y = this.currentPos.y + (j + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber;
                     mesh.position.z = this.currentPos.z + (k + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber;;
+                    mesh.castShadow = true;
 
                     this.unitCubeGroup.add(mesh);
                 }
             }
         }
 
-        this.currentMesh.material = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
-
         this.currentMesh.scale.set(1, 1, this.cubeSideLength + 1);
-
-        this.currentMesh.updateMatrix();
+        //const colliderMesh = this.currentMesh.clone();
 
         for (let i = 0; i < this.unitCubeGroup.children.length; i++) {
             this.collisionRayCaster0.set(new THREE.Vector3(
@@ -210,10 +214,14 @@ export class NumberConstruct {
 
             if (collisionRayIntersects.length > 0) {
                 this.unitCubeGroup.children[i].material = materialEmpty;
+                this.unitCubeGroup.children[i].castShadow = false;
             }
         }
 
+        console.log(this.currentMesh.position);
+
         scene.add(this.unitCubeGroup);
+        scene.remove(this.currentMesh);
     }
 
     removeUnitCubeGroup(scene) {
