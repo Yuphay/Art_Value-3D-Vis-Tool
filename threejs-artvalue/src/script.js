@@ -6,11 +6,14 @@ import * as dat from 'dat.gui';
 import Stats from 'stats.js/src/Stats.js';
 
 import { NumberConstruct } from './class_NumberConstruct.js';
-import { Vector3 } from 'three';
 
 /**
  * Base
  */
+
+// Render
+
+let renderRequested = false;
 
 // Debug
 const gui = new dat.GUI();
@@ -39,6 +42,7 @@ function devModeCallback() {
     else {
         document.body.removeChild(stats.domElement);
     }
+    requestRenderIfNotRequested();
 }
 
 let stats = new Stats();
@@ -51,6 +55,7 @@ document.body.appendChild(stats.domElement);
 
 // State Control
 const states = ['None', 'Room 1', 'Room 2', 'Room 3', 'Room 4'];
+const roomPositions = [new THREE.Vector3(-20, 8, -50), new THREE.Vector3(-20, 8, -130)];
 
 let previousState = states[0];
 let currentState = states[1];
@@ -112,34 +117,6 @@ materialSelected.transparent = true;
 materialSelected.opacity = 0.7;
 
 
-// const mesh1 = new THREE.Mesh(boxGeometry, materialEmpty);
-// mesh1.position.set(0, 0, 1);
-// scene.add(mesh1);
-
-// const mesh2 = new THREE.Mesh(boxGeometry, materialEmpty);
-// mesh2.position.set(1, 0, 0);
-// scene.add(mesh2);
-
-// const mesh3 = new THREE.Mesh(boxGeometry, materialEmpty);
-// mesh3.position.set(1, 0, 1);
-// scene.add(mesh3);
-
-// const mesh4 = new THREE.Mesh(boxGeometry, materialEmpty);
-// mesh4.position.set(0, 1, 0);
-// scene.add(mesh4);
-
-// const mesh5 = new THREE.Mesh(boxGeometry, materialEmpty);
-// mesh5.position.set(0, 1, 1);
-// scene.add(mesh5);
-
-// const mesh6 = new THREE.Mesh(boxGeometry, materialEmpty);
-// mesh6.position.set(1, 1, 0);
-// scene.add(mesh6);
-
-// const mesh7 = new THREE.Mesh(boxGeometry, materialEmpty);
-// mesh7.position.set(1, 1, 1);
-// scene.add(mesh7);
-
 
 /**
  * Lights
@@ -178,6 +155,7 @@ function lightHelperCallback() {
         scene.remove(scene.getObjectByName('lightHelper'));
         GUIOptions.lightHelperEnabled = false;
     }
+    requestRenderIfNotRequested();
 }
 
 /**
@@ -200,6 +178,8 @@ window.addEventListener('resize', () => {
     // Update renderer
     renderer.setSize(sizes.width, sizes.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    requestRenderIfNotRequested();
 })
 
 /**
@@ -214,7 +194,10 @@ scene.add(camera);
 // Camera controls
 const orbitControls = new OrbitControls(camera, canvas);
 orbitControls.enableDamping = false;
-orbitControls.target = new THREE.Vector3(-20, 8, -50);
+orbitControls.target = roomPositions[0];
+orbitControls.update();
+
+orbitControls.addEventListener('change', requestRenderIfNotRequested);
 
 /**
  * Renderer
@@ -235,7 +218,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const rendererControl = gui.addFolder("Renderer Properties");
-rendererControl.add(renderer, 'toneMappingExposure').min(0).max(2).step(0.01);
+rendererControl.add(renderer, 'toneMappingExposure').min(0).max(2).step(0.01).onChange(requestRenderIfNotRequested);
 
 /**
  * Update all materials
@@ -299,20 +282,22 @@ function enterNewState() {
         newNumber.addNumberMesh(scene, materialNumber);
     }
     else if (currentState === states[1]) {
-        //newNumber.addNumberMesh(scene, materialNumber, GUIOptions.numberValue, GUIOptions.numberStyle, GUIOptions.numberFont);
+
         if (previousState === states[2]) {
             newNumber.currentMesh.scale.set(1, 1, 1);
             newNumber.removeUnitCubeGroup(scene);
         }
-        newNumber.updateNumberMeshPos(scene, new THREE.Vector3(-20, 8, -50));
+        newNumber.updateNumberMeshPos(scene, roomPositions[0]);
         camera.position.set(newNumber.getNumberMeshPos().x, newNumber.getNumberMeshPos().y, newNumber.getNumberMeshPos().z + 20);
         orbitControls.target = newNumber.getNumberMeshPos();
     }
     else if (currentState === states[2]) {
-        newNumber.updateNumberMeshPos(scene, new THREE.Vector3(-20, 8, -130));
+        newNumber.updateNumberMeshPos(scene, roomPositions[1]);
+
         newNumber.generateCubeConstraint(scene, 40, materialCube, materialEmpty);
 
-        camera.position.set(newNumber.getNumberMeshPos().x,
+        camera.position.set(
+            newNumber.getNumberMeshPos().x,
             newNumber.getNumberMeshPos().y,
             newNumber.getNumberMeshPos().z + newNumber.getCubeSideLength() / 2 + 20);
 
@@ -406,7 +391,10 @@ const tick = () => {
 
     if (mousePickIntersects.length > 0) {
         //Closest intersection
-        mousePickIntersects[0].object.material = materialSelected;
+        if (mousePickIntersects[0].object.material !== materialSelected) {
+            mousePickIntersects[0].object.material = materialSelected;
+            requestRenderIfNotRequested();
+        }
 
         for (let i = 0; i < activeButtons.length; i++) {
             if (activeButtons[i].id != mousePickIntersects[0].object.id) {
@@ -416,7 +404,10 @@ const tick = () => {
     }
     else {
         for (let i = 0; i < activeButtons.length; i++) {
-            activeButtons[i].material = materialUnselected;
+            if (activeButtons[i].material !== materialUnselected) {
+                activeButtons[i].material = materialUnselected;
+                requestRenderIfNotRequested();
+            }
         }
     }
 
@@ -431,8 +422,7 @@ const tick = () => {
         }
     }
 
-    // Render
-    renderer.render(scene, camera)
+    // Debug
     stats.update();
 
     // Call tick again on the next frame
@@ -440,3 +430,21 @@ const tick = () => {
 }
 
 tick()
+
+function render() {
+    renderRequested = false;
+    renderer.render(scene, camera);
+}
+
+//TODO: when loading is ready
+setTimeout(() => {
+    render();
+  }, 1000);
+
+function requestRenderIfNotRequested() {
+    console.log("Rendering requested");
+    if (!renderRequested) {
+        renderRequested = true;
+        requestAnimationFrame(render);
+    }
+}

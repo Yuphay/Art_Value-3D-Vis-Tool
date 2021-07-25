@@ -16,6 +16,7 @@ export class NumberConstruct {
         this.numberStyle = numberStyle;
         this.numberFont = numberFont;
         this.standardNumberSize = 2;
+        this.numberMeshScale = 1;
         this.boundingBoxSize = new THREE.Vector3(0, 0, 0);
         this.currentPos = new THREE.Vector3(-20, 8, -50); // initial value
         this.unitCubeGroup = new THREE.Group();
@@ -27,11 +28,18 @@ export class NumberConstruct {
     }
 
     updateNumberMeshPos(scene, newPos) {
+
+        console.log("updateNumberMeshPos started");
+
         scene.remove(this.currentMesh);
         this.currentPos.set(newPos.x, newPos.y, newPos.z);
         this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
-        this.currentMesh.updateMatrix();
+
+        this.currentMesh.scale.set(this.numberMeshScale, this.numberMeshScale, this.numberMeshScale);
+
         scene.add(this.currentMesh);
+
+        console.log("updateNumberMeshPos finished");
     }
 
     getNumberMeshPos() {
@@ -43,6 +51,8 @@ export class NumberConstruct {
     }
 
     addNumberMesh(scene, material, numberValue = this.numberValue, numberStyle = this.numberStyle, numberFont = this.numberFont) {
+
+        console.log("addNumberMesh started");
 
         scene.remove(this.currentMesh);
 
@@ -71,23 +81,28 @@ export class NumberConstruct {
             material.opacity = 0.0;
             this.currentGeometry.center();
             this.currentMesh = new THREE.Mesh(this.currentGeometry, material);
+            this.currentMesh.material.opacity = 0.5;
 
             this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
     
             this.currentMesh.name = 'currentNumberMesh';
             
             let boundingBox = new THREE.Box3();
+            let boundingBoxSize = new THREE.Vector3();
             boundingBox.setFromObject(this.currentMesh);
+            boundingBox.getSize(boundingBoxSize);
     
-            boundingBox.getSize(this.boundingBoxSize);
-    
-            const scaleFactor = this.standardNumberSize / this.boundingBoxSize.y;
-    
-            this.currentMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
-    
-            this.currentMesh.material.opacity = 0.5;
-    
+            this.numberMeshScale = this.standardNumberSize / boundingBoxSize.y;
+            this.currentMesh.scale.set(this.numberMeshScale, this.numberMeshScale, this.numberMeshScale);
+
+            boundingBox.setFromObject(this.currentMesh);
+            boundingBox.getSize(boundingBoxSize);
+
+            this.boundingBoxSize.set(boundingBoxSize.x, boundingBoxSize.y, boundingBoxSize.z);
+
             scene.add(this.currentMesh);
+
+            console.log("addNumberMesh finished");
 
         }.bind(this));
     }
@@ -179,7 +194,9 @@ export class NumberConstruct {
 
     generateCubeConstraint(scene, unitCubeNumber, materialCube, materialEmpty) {
 
-        this.cubeSideLength = this.boundingBoxSize.x + 1;
+        console.log("generateCubeConstraint started");
+
+        this.cubeSideLength = this.boundingBoxSize.x * 1.10;
         let unitCubeSideLength = this.cubeSideLength / unitCubeNumber;
         const unitCubeGeometry = new THREE.BoxGeometry(unitCubeSideLength, unitCubeSideLength, unitCubeSideLength);
         this.unitCubeGroup.clear();
@@ -199,7 +216,6 @@ export class NumberConstruct {
         }
 
         this.currentMesh.scale.set(1, 1, this.cubeSideLength + 1);
-        //const colliderMesh = this.currentMesh.clone();
 
         for (let i = 0; i < this.unitCubeGroup.children.length; i++) {
             this.collisionRayCaster0.set(new THREE.Vector3(
@@ -218,10 +234,10 @@ export class NumberConstruct {
             }
         }
 
-        console.log(this.currentMesh.position);
-
         scene.add(this.unitCubeGroup);
         scene.remove(this.currentMesh);
+
+        console.log("generateCubeConstraint finished");
     }
 
     removeUnitCubeGroup(scene) {
