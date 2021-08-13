@@ -50,7 +50,7 @@ export class NumberConstruct {
         return this.cubeSideLength;
     }
 
-    addNumberMesh(scene, material, numberValue = this.numberValue, numberStyle = this.numberStyle, numberFont = this.numberFont) {
+    addNumberMesh(renderer, scene, camera, material, numberValue = this.numberValue, numberStyle = this.numberStyle, numberFont = this.numberFont) {
 
         console.log("addNumberMesh started");
 
@@ -101,6 +101,8 @@ export class NumberConstruct {
             this.boundingBoxSize.set(boundingBoxSize.x, boundingBoxSize.y, boundingBoxSize.z);
 
             scene.add(this.currentMesh);
+
+            renderer.render(scene, camera);
 
             console.log("addNumberMesh finished");
 

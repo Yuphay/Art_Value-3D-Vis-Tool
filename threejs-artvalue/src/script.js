@@ -235,21 +235,29 @@ const updateAllMaterials = () => {
 }
 
 /**
- * Contents
+ * Setting up the scene
  */
-// Gallery environment
-gltfLoader.load(
-    '/models/NumberGallery/NumberGallery.gltf',
-    (gltf) => {
-        console.log("Gallery models loaded!");
-        gltf.scene.scale.set(5, 5, 5);
-        gltf.scene.position.set(0, 0, 0);
-        environmentObjects.push(gltf.scene);
-        scene.add(gltf.scene);
+function init() {
 
-        updateAllMaterials();
-    }
-)
+    console.assert(previousState === states[0]);
+
+    // TODO: loading progress bar animation
+    gltfLoader.load(
+        '/models/NumberGallery/NumberGallery.gltf',
+        (gltf) => {
+            console.log("Gallery models loaded!");
+            gltf.scene.scale.set(5, 5, 5);
+            gltf.scene.position.set(0, 0, 0);
+            environmentObjects.push(gltf.scene);
+            scene.add(gltf.scene);
+            updateAllMaterials();
+
+            newNumber.addNumberMesh(renderer, scene, camera, materialNumber);
+            previousState = currentState;
+        }
+    )
+}
+
 
 // FRONT view
 // TODO: Customization UI
@@ -263,7 +271,7 @@ const newNumber = new NumberConstruct(parseFloat(GUIOptions.numberValue), GUIOpt
 
 function numberMeshCallback() {
     if (currentState === states[1]) {
-        newNumber.addNumberMesh(scene, materialNumber, GUIOptions.numberValue, GUIOptions.numberStyle, GUIOptions.numberFont);
+        newNumber.addNumberMesh(renderer, scene, camera, materialNumber, GUIOptions.numberValue, GUIOptions.numberStyle, GUIOptions.numberFont);
     }
 }
 
@@ -278,11 +286,7 @@ function enterNewState() {
 
     console.log("New state: " + currentState);
 
-    if (previousState === states[0]) {
-        newNumber.addNumberMesh(scene, materialNumber);
-    }
-    else if (currentState === states[1]) {
-
+    if (currentState === states[1] && previousState !== states[0]) {
         if (previousState === states[2]) {
             newNumber.currentMesh.scale.set(1, 1, 1);
             newNumber.removeUnitCubeGroup(scene);
@@ -397,8 +401,10 @@ const tick = () => {
         }
 
         for (let i = 0; i < activeButtons.length; i++) {
-            if (activeButtons[i].id != mousePickIntersects[0].object.id) {
+            if (activeButtons[i].id != mousePickIntersects[0].object.id && 
+                activeButtons[i].material !== materialUnselected) {
                 activeButtons[i].material = materialUnselected;
+                requestRenderIfNotRequested();
             }
         }
     }
@@ -429,17 +435,10 @@ const tick = () => {
     window.requestAnimationFrame(tick)
 }
 
-tick()
-
 function render() {
     renderRequested = false;
     renderer.render(scene, camera);
 }
-
-//TODO: when loading is ready
-setTimeout(() => {
-    render();
-  }, 1000);
 
 function requestRenderIfNotRequested() {
     console.log("Rendering requested");
@@ -448,3 +447,7 @@ function requestRenderIfNotRequested() {
         requestAnimationFrame(render);
     }
 }
+
+init();
+
+tick();
