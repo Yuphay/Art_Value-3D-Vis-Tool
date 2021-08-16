@@ -25,6 +25,7 @@ export class NumberConstruct {
         this.collisionRayCaster1 = new THREE.Raycaster();
         this.collisionRayCaster2 = new THREE.Raycaster();
         this.collisionRayCaster3 = new THREE.Raycaster();
+
     }
 
     updateNumberMeshPos(scene, newPos) {
@@ -33,8 +34,8 @@ export class NumberConstruct {
 
         scene.remove(this.currentMesh);
         this.currentPos.set(newPos.x, newPos.y, newPos.z);
-        this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
 
+        this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
         this.currentMesh.scale.set(this.numberMeshScale, this.numberMeshScale, this.numberMeshScale);
 
         scene.add(this.currentMesh);
@@ -84,14 +85,12 @@ export class NumberConstruct {
             this.currentMesh.material.opacity = 0.5;
 
             this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
-    
-            this.currentMesh.name = 'currentNumberMesh';
-            
+
             let boundingBox = new THREE.Box3();
             let boundingBoxSize = new THREE.Vector3();
             boundingBox.setFromObject(this.currentMesh);
             boundingBox.getSize(boundingBoxSize);
-    
+
             this.numberMeshScale = this.standardNumberSize / boundingBoxSize.y;
             this.currentMesh.scale.set(this.numberMeshScale, this.numberMeshScale, this.numberMeshScale);
 
@@ -194,52 +193,93 @@ export class NumberConstruct {
         }
     }
 
-    generateCubeConstraint(scene, unitCubeNumber, materialCube, materialEmpty) {
+    generateCubeConstraint(renderer, scene, camera, unitCubeNumber, materialCube, materialEmpty) {
 
         console.log("generateCubeConstraint started");
+
+        scene.remove(this.currentMesh);
 
         this.cubeSideLength = this.boundingBoxSize.x * 1.10;
         let unitCubeSideLength = this.cubeSideLength / unitCubeNumber;
         const unitCubeGeometry = new THREE.BoxGeometry(unitCubeSideLength, unitCubeSideLength, unitCubeSideLength);
         this.unitCubeGroup.clear();
 
-        for (let k = 0; k < unitCubeNumber; k++) {
-            for (let j = 0; j < unitCubeNumber; j++) {
-                for (let i = 0; i < unitCubeNumber; i++) {
-                    let mesh = new THREE.Mesh(unitCubeGeometry, materialCube);
-                    mesh.position.x = this.currentPos.x + (i + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber;
-                    mesh.position.y = this.currentPos.y + (j + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber;
-                    mesh.position.z = this.currentPos.z + (k + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber;;
-                    mesh.castShadow = true;
-
-                    this.unitCubeGroup.add(mesh);
-                }
-            }
-        }
-
         this.currentMesh.scale.set(1, 1, this.cubeSideLength + 1);
 
-        for (let i = 0; i < this.unitCubeGroup.children.length; i++) {
-            this.collisionRayCaster0.set(new THREE.Vector3(
-                this.unitCubeGroup.children[i].position.x - unitCubeSideLength / 2,
-                this.unitCubeGroup.children[i].position.y + unitCubeSideLength / 2,
-                this.unitCubeGroup.children[i].position.z - unitCubeSideLength / 2),
-                new THREE.Vector3(0, 0, 1));
 
-            //this.collisionRayCaster0.far = unitCubeSideLength;
-
-            const collisionRayIntersects = this.collisionRayCaster0.intersectObjects([this.currentMesh]);
-
-            if (collisionRayIntersects.length > 0) {
-                this.unitCubeGroup.children[i].material = materialEmpty;
-                this.unitCubeGroup.children[i].castShadow = false;
-            }
+        for (let i = 0; i < unitCubeNumber * unitCubeNumber * unitCubeNumber; i++) {
+            let mesh = new THREE.Mesh(unitCubeGeometry, materialCube);
+            mesh.castShadow = true;
+            this.unitCubeGroup.add(mesh);
         }
 
-        scene.add(this.unitCubeGroup);
-        scene.remove(this.currentMesh);
+        let webWorker = new Worker(new URL('./workers/numberConstructWorker.js', import.meta.url));
+        webWorker.postMessage([this.currentPos, unitCubeNumber, unitCubeSideLength, this.numberText, this.numberFont, this.numberMeshScale, this.cubeSideLength, this.standardNumberSize]);
+        webWorker.onmessage = e => {
+            let positions = e.data[0];
+            let collisions = e.data[1];
 
-        console.log("generateCubeConstraint finished");
+            for (let i = 0; i < this.unitCubeGroup.children.length; i++) {
+                this.unitCubeGroup.children[i].position.set(positions[i].x, positions[i].y, positions[i].z);
+
+                if (collisions[i]) {
+
+                    this.unitCubeGroup.children[i].material = materialEmpty;
+                    this.unitCubeGroup.children[i].castShadow = false;
+                }
+            }
+            scene.add(this.unitCubeGroup);
+
+            renderer.render(scene, camera);
+
+            console.log("generateCubeConstraint finished");
+        }
+
+
+        // for (let k = 0; k < unitCubeNumber; k++) {
+        //     for (let j = 0; j < unitCubeNumber; j++) {
+        //         for (let i = 0; i < unitCubeNumber; i++) {
+        //             let mesh = new THREE.Mesh(unitCubeGeometry, materialCube);
+        //             mesh.position.x = this.currentPos.x + (i + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber;
+        //             mesh.position.y = this.currentPos.y + (j + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber;
+        //             mesh.position.z = this.currentPos.z + (k + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber;
+        //             mesh.castShadow = true;
+
+        //             this.unitCubeGroup.add(mesh);
+        //         }
+        //     }
+        // }
+
+        // this.collisionRayCaster0.layers.set(1);
+        // this.currentMesh.layers.enable(1);
+        // this.currentMesh.material.side = THREE.DoubleSide;
+        // this.currentMesh.updateMatrixWorld();
+
+        // for (let i = 0; i < this.unitCubeGroup.children.length; i++) {
+
+        //     let worldPos = new THREE.Vector3(0, 0, 0);
+        //     this.unitCubeGroup.children[i].getWorldPosition(worldPos);
+
+        //     this.collisionRayCaster0.set(new THREE.Vector3(
+        //         worldPos.x - unitCubeSideLength / 2,
+        //         worldPos.y + unitCubeSideLength / 2,
+        //         worldPos.z - unitCubeSideLength / 2),
+        //         new THREE.Vector3(0, 0, 1));
+
+        //     //this.collisionRayCaster0.far = unitCubeSideLength;
+
+        //     let collisionRayIntersects = this.collisionRayCaster0.intersectObjects([this.currentMesh], true);
+
+        //     if (collisionRayIntersects.length > 0) {
+        //         this.unitCubeGroup.children[i].material = materialEmpty;
+        //         this.unitCubeGroup.children[i].castShadow = false;
+        //     }
+        // }
+
+        // scene.add(this.unitCubeGroup);
+        // renderer.render(scene, camera);
+        // console.log("generateCubeConstraint finished");
+
     }
 
     removeUnitCubeGroup(scene) {
