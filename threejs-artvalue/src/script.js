@@ -128,7 +128,9 @@ directionalLight.castShadow = true;
 directionalLight.shadow.mapSize.width = 2048;
 directionalLight.shadow.mapSize.height = 2048;
 directionalLight.shadow.camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.5, 50);
-directionalLight.shadow.normalBias = 0.05;
+
+directionalLight.shadow.normalBias = 0.01;
+directionalLight.shadow.bias = 0.0002;
 
 const directionalLightControl = gui.addFolder("Directional Light");
 directionalLightControl.add(directionalLight.position, 'x').min(0).max(50).step(0.01).listen();
@@ -292,7 +294,7 @@ function enterNewState() {
             newNumber.removePreviousCubes(scene);
 
             let matrixScaling = new THREE.Matrix4();
-            matrixScaling.makeScale(1, 1, 1 / newNumber.cubeDepthScalingFactor);
+            matrixScaling.makeScale(1, 1, 1 / newNumber.numberDepthScalingFactor);
             newNumber.currentMesh.geometry.applyMatrix4(matrixScaling);
         }
         newNumber.currentMesh.material.side = THREE.FrontSide;

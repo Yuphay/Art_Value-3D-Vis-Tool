@@ -22,12 +22,11 @@ export class NumberConstruct {
         //this.unitCubeGroup = new THREE.Group();
         this.instancedMesh;
         this.cubeSideLength = 0;
-        this.cubeDepthScalingFactor = 0;
-        this.collisionRayCaster0 = new THREE.Raycaster();
-        this.collisionRayCaster1 = new THREE.Raycaster();
-        this.collisionRayCaster2 = new THREE.Raycaster();
-        this.collisionRayCaster3 = new THREE.Raycaster();
-
+        this.numberDepthScalingFactor = 0;
+        // this.collisionRayCaster0 = new THREE.Raycaster();
+        // this.collisionRayCaster1 = new THREE.Raycaster();
+        // this.collisionRayCaster2 = new THREE.Raycaster();
+        // this.collisionRayCaster3 = new THREE.Raycaster();
     }
 
     updateNumberMeshPos(scene, newPos) {
@@ -201,7 +200,7 @@ export class NumberConstruct {
 
         console.log("generateCubeConstraint started");
 
-        //scene.remove(this.currentMesh);
+        scene.remove(this.currentMesh);
 
         this.cubeSideLength = Math.max(this.boundingBoxSize.x, this.boundingBoxSize.y) * 1.1 + 0.4;
 
@@ -210,8 +209,8 @@ export class NumberConstruct {
         //this.unitCubeGroup.clear();
 
         let matrixScaling = new THREE.Matrix4();
-        this.cubeDepthScalingFactor = (this.cubeSideLength + 1) / this.boundingBoxSize.z;
-        matrixScaling.makeScale(1, 1, this.cubeDepthScalingFactor);
+        this.numberDepthScalingFactor = (this.cubeSideLength + 1) / this.boundingBoxSize.z;
+        matrixScaling.makeScale(1, 1, this.numberDepthScalingFactor);
         this.currentMesh.geometry.applyMatrix4(matrixScaling);
         //this.currentMesh.scale.set(1, 1, this.cubeSideLength + 1);
 
@@ -222,10 +221,10 @@ export class NumberConstruct {
         // }
 
         let webWorker = new Worker(new URL('./workers/numberConstructWorker.js', import.meta.url));
-        webWorker.postMessage([this.currentPos, unitCubeNumber, unitCubeSideLength, this.numberText, this.numberFont, this.numberMeshScale, this.cubeDepthScalingFactor, this.standardNumberSize]);
+        webWorker.postMessage([this.currentPos, unitCubeNumber, unitCubeSideLength, this.numberText, this.numberFont, this.numberMeshScale, this.numberDepthScalingFactor, this.standardNumberSize, this.cubeSideLength + 1]);
         webWorker.onmessage = e => {
 
-            console.log("Message received");
+            console.log("Collision message received");
 
             let positions = e.data[0];
             let collisions = e.data[1];
