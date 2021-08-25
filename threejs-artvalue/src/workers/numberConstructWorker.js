@@ -8,7 +8,7 @@ self.onmessage = function (e) {
     const numberText = e.data[3];
     const numberFont = e.data[4];
     const numberMeshScale = e.data[5];
-    const cubeSideLength = e.data[6];
+    const cubeDepthScalingFactor = e.data[6];
     const standardNumberSize = e.data[7];
 
     let positions = [];
@@ -49,8 +49,12 @@ self.onmessage = function (e) {
         currentGeometry.center();
         let currentMesh = new THREE.Mesh(currentGeometry, new THREE.MeshBasicMaterial({ color: 0xFFFFFF }));
         currentMesh.position.set(currentPos.x, currentPos.y, currentPos.z);
-        currentMesh.scale.set(numberMeshScale, numberMeshScale, numberMeshScale);
-        currentMesh.scale.set(1, 1, cubeSideLength + 1);
+
+        //currentMesh.scale.set(numberMeshScale, numberMeshScale, numberMeshScale);
+        //currentMesh.scale.set(1, 1, cubeSideLength + 1);
+        let matrixScaling = new THREE.Matrix4();
+        matrixScaling.makeScale(numberMeshScale, numberMeshScale, numberMeshScale * cubeDepthScalingFactor);
+        currentMesh.geometry.applyMatrix4(matrixScaling);
 
         collisionRayCaster0.layers.set(1);
         currentMesh.layers.enable(1);
@@ -64,9 +68,9 @@ self.onmessage = function (e) {
                 positions[i].y + unitCubeSideLength / 2,
                 positions[i].z - unitCubeSideLength / 2),
                 new THREE.Vector3(0, 0, 1));
-    
+
             //collisionRayCaster0.far = unitCubeSideLength;
-    
+
             const collisionRayIntersects = collisionRayCaster0.intersectObject(currentMesh);
 
             // console.log(i);

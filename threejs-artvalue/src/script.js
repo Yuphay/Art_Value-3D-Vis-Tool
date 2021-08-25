@@ -55,7 +55,7 @@ document.body.appendChild(stats.domElement);
 
 // State Control
 const states = ['None', 'Room 1', 'Room 2', 'Room 3', 'Room 4'];
-const roomPositions = [new THREE.Vector3(-20, 8, -50), new THREE.Vector3(-20, 8, -130)];
+const roomPositions = [new THREE.Vector3(-20, 8, -50), new THREE.Vector3(-20, 10.5, -130)];
 
 let previousState = states[0];
 let currentState = states[1];
@@ -125,12 +125,10 @@ scene.add(ambientLight);
 
 const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 5.0);
 directionalLight.castShadow = true;
-directionalLight.shadow.mapSize.set(1024, 1024);
-directionalLight.shadow.camera.far = 100;
-//directionalLight.shadow.camera.width = 1024;
-//directionalLight.shadow.camera.height = 1024;
+directionalLight.shadow.mapSize.width = 2048;
+directionalLight.shadow.mapSize.height = 2048;
+directionalLight.shadow.camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.5, 50);
 directionalLight.shadow.normalBias = 0.05;
-directionalLight.position.set(-20, 8, -100);
 
 const directionalLightControl = gui.addFolder("Directional Light");
 directionalLightControl.add(directionalLight.position, 'x').min(0).max(50).step(0.01).listen();
@@ -187,13 +185,12 @@ window.addEventListener('resize', () => {
 // Base camera
 const camera = new THREE.PerspectiveCamera(40, sizes.width / sizes.height, 0.1, 500);
 //const camera = new THREE.OrthographicCamera( sizes.width / - 2, sizes.width / 2, sizes.height / 2, sizes.height / - 2, 1, 1000 );
-camera.position.set(-20, 8, -30);
-scene.add(camera);
+
 
 // Camera controls
 const orbitControls = new OrbitControls(camera, canvas);
 orbitControls.enableDamping = false;
-orbitControls.target = roomPositions[0];
+orbitControls.target = new THREE.Vector3(roomPositions[0].x, roomPositions[0].y, roomPositions[0].z);
 orbitControls.update();
 
 orbitControls.addEventListener('change', requestRenderIfNotRequested);
@@ -241,6 +238,9 @@ function init() {
 
     console.assert(previousState === states[0]);
 
+    camera.position.set(roomPositions[0].x, roomPositions[0].y, roomPositions[0].z + 20);
+    scene.add(camera);
+
     // TODO: loading progress bar animation
     gltfLoader.load(
         '/models/NumberGallery/NumberGallery.gltf',
@@ -267,7 +267,8 @@ numberControl.add(GUIOptions, 'numberStyle', ['European', 'European No Separator
 numberControl.add(GUIOptions, 'numberFont', ['Avenir Black', 'Crash Numbering Serif', 'Nexa Rust Handmade', 'Pecita',
     'Press Start 2P', 'Roboto Bold']).name('Font').onFinishChange(numberMeshCallback);
 
-const newNumber = new NumberConstruct(parseFloat(GUIOptions.numberValue), GUIOptions.numberStyle, GUIOptions.numberFont);
+const newNumber = new NumberConstruct(parseFloat(GUIOptions.numberValue), GUIOptions.numberStyle, GUIOptions.numberFont,
+    new THREE.Vector3(roomPositions[0].x, roomPositions[0].y, roomPositions[0].z));
 
 function numberMeshCallback() {
     if (currentState === states[1]) {
@@ -288,18 +289,22 @@ function enterNewState() {
 
     if (currentState === states[1] && previousState !== states[0]) {
         if (previousState === states[2]) {
-            newNumber.currentMesh.scale.set(1, 1, 1);
-            newNumber.removeUnitCubeGroup(scene);
+            newNumber.removePreviousCubes(scene);
+
+            let matrixScaling = new THREE.Matrix4();
+            matrixScaling.makeScale(1, 1, 1 / newNumber.cubeDepthScalingFactor);
+            newNumber.currentMesh.geometry.applyMatrix4(matrixScaling);
         }
         newNumber.currentMesh.material.side = THREE.FrontSide;
-        newNumber.updateNumberMeshPos(scene, roomPositions[0]);
+
+        newNumber.updateNumberMeshPos(scene, new THREE.Vector3(roomPositions[0].x, roomPositions[0].y, roomPositions[0].z));
         camera.position.set(newNumber.getNumberMeshPos().x, newNumber.getNumberMeshPos().y, newNumber.getNumberMeshPos().z + 20);
         orbitControls.target = newNumber.getNumberMeshPos();
     }
     else if (currentState === states[2]) {
-        newNumber.updateNumberMeshPos(scene, roomPositions[1]);
+        newNumber.updateNumberMeshPos(scene, new THREE.Vector3(roomPositions[1].x, roomPositions[1].y, roomPositions[1].z));
 
-        newNumber.generateCubeConstraint(renderer, scene, camera, 60, materialCube, materialEmpty);
+        newNumber.generateCubeConstraint(renderer, scene, camera, 100, materialCube);
 
         camera.position.set(
             newNumber.getNumberMeshPos().x,
@@ -313,6 +318,10 @@ function enterNewState() {
         targetObject.position.set(newNumber.currentMesh.position.x, newNumber.currentMesh.position.y, newNumber.currentMesh.position.z);
         scene.add(targetObject);
         directionalLight.target = targetObject;
+        directionalLight.position.set(
+            newNumber.getNumberMeshPos().x,
+            newNumber.getNumberMeshPos().y,
+            newNumber.getNumberMeshPos().z + newNumber.getCubeSideLength() / 2 + 20);
 
         scene.add(directionalLight);
     }
@@ -403,7 +412,7 @@ const tick = () => {
         }
 
         for (let i = 0; i < activeButtons.length; i++) {
-            if (activeButtons[i].id != mousePickIntersects[0].object.id && 
+            if (activeButtons[i].id != mousePickIntersects[0].object.id &&
                 activeButtons[i].material !== materialUnselected) {
                 activeButtons[i].material = materialUnselected;
                 requestRenderIfNotRequested('mouse pick');

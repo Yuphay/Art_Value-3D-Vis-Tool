@@ -6,7 +6,7 @@ import * as THREE from 'three';
 
 export class NumberConstruct {
 
-    constructor(numberValue, numberStyle, numberFont) {
+    constructor(numberValue, numberStyle, numberFont, position) {
         this.currentGeometry;
         this.currentMesh = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), new THREE.MeshBasicMaterial({ color: 0xFFFFFF }));
         this.currentMesh.name = 'currentNumberMesh';
@@ -18,9 +18,11 @@ export class NumberConstruct {
         this.standardNumberSize = 2;
         this.numberMeshScale = 1;
         this.boundingBoxSize = new THREE.Vector3(0, 0, 0);
-        this.currentPos = new THREE.Vector3(-20, 8, -50); // initial value
-        this.unitCubeGroup = new THREE.Group();
+        this.currentPos = position; // initial position
+        //this.unitCubeGroup = new THREE.Group();
+        this.instancedMesh;
         this.cubeSideLength = 0;
+        this.cubeDepthScalingFactor = 0;
         this.collisionRayCaster0 = new THREE.Raycaster();
         this.collisionRayCaster1 = new THREE.Raycaster();
         this.collisionRayCaster2 = new THREE.Raycaster();
@@ -36,7 +38,6 @@ export class NumberConstruct {
         this.currentPos.set(newPos.x, newPos.y, newPos.z);
 
         this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
-        this.currentMesh.scale.set(this.numberMeshScale, this.numberMeshScale, this.numberMeshScale);
 
         scene.add(this.currentMesh);
 
@@ -87,17 +88,20 @@ export class NumberConstruct {
             this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
 
             let boundingBox = new THREE.Box3();
-            let boundingBoxSize = new THREE.Vector3();
+            let boundingBoxSizeTemp = new THREE.Vector3();
             boundingBox.setFromObject(this.currentMesh);
-            boundingBox.getSize(boundingBoxSize);
+            boundingBox.getSize(boundingBoxSizeTemp);
 
-            this.numberMeshScale = this.standardNumberSize / boundingBoxSize.y;
-            this.currentMesh.scale.set(this.numberMeshScale, this.numberMeshScale, this.numberMeshScale);
+            this.numberMeshScale = this.standardNumberSize / boundingBoxSizeTemp.y;
+            //this.currentMesh.scale.set(this.numberMeshScale, this.numberMeshScale, this.numberMeshScale);
+            let matrixScaling = new THREE.Matrix4();
+            matrixScaling.makeScale(this.numberMeshScale, this.numberMeshScale, this.numberMeshScale);
+            this.currentMesh.geometry.applyMatrix4(matrixScaling);
 
             boundingBox.setFromObject(this.currentMesh);
-            boundingBox.getSize(boundingBoxSize);
+            boundingBox.getSize(boundingBoxSizeTemp);
 
-            this.boundingBoxSize.set(boundingBoxSize.x, boundingBoxSize.y, boundingBoxSize.z);
+            this.boundingBoxSize.set(boundingBoxSizeTemp.x, boundingBoxSizeTemp.y, boundingBoxSizeTemp.z);
 
             scene.add(this.currentMesh);
 
@@ -193,42 +197,68 @@ export class NumberConstruct {
         }
     }
 
-    generateCubeConstraint(renderer, scene, camera, unitCubeNumber, materialCube, materialEmpty) {
+    generateCubeConstraint(renderer, scene, camera, unitCubeNumber, materialCube) {
 
         console.log("generateCubeConstraint started");
 
-        scene.remove(this.currentMesh);
+        //scene.remove(this.currentMesh);
 
-        this.cubeSideLength = this.boundingBoxSize.x * 1.10;
-        let unitCubeSideLength = this.cubeSideLength / unitCubeNumber;
+        this.cubeSideLength = Math.max(this.boundingBoxSize.x, this.boundingBoxSize.y) * 1.1 + 0.4;
+
+        const unitCubeSideLength = this.cubeSideLength / unitCubeNumber;
         const unitCubeGeometry = new THREE.BoxGeometry(unitCubeSideLength, unitCubeSideLength, unitCubeSideLength);
-        this.unitCubeGroup.clear();
+        //this.unitCubeGroup.clear();
 
-        this.currentMesh.scale.set(1, 1, this.cubeSideLength + 1);
+        let matrixScaling = new THREE.Matrix4();
+        this.cubeDepthScalingFactor = (this.cubeSideLength + 1) / this.boundingBoxSize.z;
+        matrixScaling.makeScale(1, 1, this.cubeDepthScalingFactor);
+        this.currentMesh.geometry.applyMatrix4(matrixScaling);
+        //this.currentMesh.scale.set(1, 1, this.cubeSideLength + 1);
 
 
-        for (let i = 0; i < unitCubeNumber * unitCubeNumber * unitCubeNumber; i++) {
-            let mesh = new THREE.Mesh(unitCubeGeometry, materialCube);
-            mesh.castShadow = true;
-            this.unitCubeGroup.add(mesh);
-        }
+        // for (let i = 0; i < unitCubeNumber * unitCubeNumber * unitCubeNumber; i++) {
+        //     mesh.castShadow = true;
+        //     this.unitCubeGroup.add(unitCubeGeometry);
+        // }
 
         let webWorker = new Worker(new URL('./workers/numberConstructWorker.js', import.meta.url));
-        webWorker.postMessage([this.currentPos, unitCubeNumber, unitCubeSideLength, this.numberText, this.numberFont, this.numberMeshScale, this.cubeSideLength, this.standardNumberSize]);
+        webWorker.postMessage([this.currentPos, unitCubeNumber, unitCubeSideLength, this.numberText, this.numberFont, this.numberMeshScale, this.cubeDepthScalingFactor, this.standardNumberSize]);
         webWorker.onmessage = e => {
+
+            console.log("Message received");
+
             let positions = e.data[0];
             let collisions = e.data[1];
 
-            for (let i = 0; i < this.unitCubeGroup.children.length; i++) {
-                this.unitCubeGroup.children[i].position.set(positions[i].x, positions[i].y, positions[i].z);
+            let newPositions = [];
+            let cubeCount = 0;
 
-                if (collisions[i]) {
+            for (let i = 0; i < positions.length; i++) {
+                //this.unitCubeGroup.children[i].position.set(positions[i].x, positions[i].y, positions[i].z);
 
-                    this.unitCubeGroup.children[i].material = materialEmpty;
-                    this.unitCubeGroup.children[i].castShadow = false;
+                if (!collisions[i]) {
+                    newPositions.push(positions[i]);
+                    cubeCount++;
+                    // this.unitCubeGroup.children[i].material = materialEmpty;
+                    // this.unitCubeGroup.children[i].castShadow = false;
                 }
             }
-            scene.add(this.unitCubeGroup);
+
+            this.instancedMesh = new THREE.InstancedMesh(unitCubeGeometry, materialCube, cubeCount);
+
+            let matrixTranslation = new THREE.Matrix4();
+            let identityQuaternion = new THREE.Quaternion();
+            identityQuaternion = identityQuaternion.identity();
+
+            for (let i = 0; i < cubeCount; i++) {
+                matrixTranslation.compose(newPositions[i], identityQuaternion, new THREE.Vector3(1, 1, 1));
+                this.instancedMesh.setMatrixAt(i + 1, matrixTranslation);
+            }
+
+            this.instancedMesh.instanceMatrix.needsUpdate = true;
+            this.instancedMesh.castShadow = true;
+
+            scene.add(this.instancedMesh);
 
             renderer.render(scene, camera);
 
@@ -282,7 +312,7 @@ export class NumberConstruct {
 
     }
 
-    removeUnitCubeGroup(scene) {
-        scene.remove(this.unitCubeGroup);
+    removePreviousCubes(scene) {
+        scene.remove(this.instancedMesh);
     }
 }
