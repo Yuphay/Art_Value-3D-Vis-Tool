@@ -214,11 +214,11 @@ export class NumberConstruct {
         this.currentMesh.geometry.applyMatrix4(matrixScaling);
         //this.currentMesh.scale.set(1, 1, this.cubeSideLength + 1);
 
-
         // for (let i = 0; i < unitCubeNumber * unitCubeNumber * unitCubeNumber; i++) {
         //     mesh.castShadow = true;
         //     this.unitCubeGroup.add(unitCubeGeometry);
         // }
+
 
         let webWorker = new Worker(new URL('./workers/numberConstructWorker.js', import.meta.url));
         webWorker.postMessage([this.currentPos, unitCubeNumber, unitCubeSideLength, this.numberText, this.numberFont, this.numberMeshScale, this.numberDepthScalingFactor, this.standardNumberSize, this.cubeSideLength + 1]);
@@ -259,11 +259,11 @@ export class NumberConstruct {
 
             scene.add(this.instancedMesh);
 
+
             renderer.render(scene, camera);
 
             console.log("generateCubeConstraint finished");
         }
-
 
         // for (let k = 0; k < unitCubeNumber; k++) {
         //     for (let j = 0; j < unitCubeNumber; j++) {

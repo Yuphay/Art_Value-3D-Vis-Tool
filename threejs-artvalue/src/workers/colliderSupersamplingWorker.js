@@ -2,9 +2,10 @@ import * as THREE from 'three';
 
 self.onmessage = function (e) {
 
+    let id = e.data.id;
+
     console.log("Thread " + id + " started");
 
-    let id = e.data.id;
     let unitCubeNumber = e.data.unitCubeNumber;
     let xyPositions = e.data.xyPositions;
     let numberDepth = e.data.numberDepth;
@@ -52,30 +53,30 @@ self.onmessage = function (e) {
             for (let i = 0; i < unitCubeNumber; i++) {
                 if (id === 0) {
                     collisionRayCaster.set(new THREE.Vector3(
-                        xyPositions[j][i].x - unitCubeSideLength * 0.75,
-                        xyPositions[j][i].y + unitCubeSideLength * 0.75,
-                        xyPositions[j][i].z - unitCubeSideLength * 0.5),
+                        xyPositions[j][i].x - unitCubeSideLength * 0.25,
+                        xyPositions[j][i].y + unitCubeSideLength * 0.25,
+                        xyPositions[j][i].z),
                         new THREE.Vector3(0, 0, 1));
                 }
                 else if (id === 1) {
                     collisionRayCaster.set(new THREE.Vector3(
-                        xyPositions[j][i].x - unitCubeSideLength * 0.25,
-                        xyPositions[j][i].y + unitCubeSideLength * 0.75,
-                        xyPositions[j][i].z - unitCubeSideLength * 0.5),
+                        xyPositions[j][i].x + unitCubeSideLength * 0.25,
+                        xyPositions[j][i].y + unitCubeSideLength * 0.25,
+                        xyPositions[j][i].z),
                         new THREE.Vector3(0, 0, 1));
                 }
                 else if (id === 2) {
                     collisionRayCaster.set(new THREE.Vector3(
-                        xyPositions[j][i].x - unitCubeSideLength * 0.75,
-                        xyPositions[j][i].y + unitCubeSideLength * 0.25,
-                        xyPositions[j][i].z - unitCubeSideLength * 0.5),
+                        xyPositions[j][i].x - unitCubeSideLength * 0.25,
+                        xyPositions[j][i].y - unitCubeSideLength * 0.25,
+                        xyPositions[j][i].z),
                         new THREE.Vector3(0, 0, 1));
                 }
                 else if (id === 3) {
                     collisionRayCaster.set(new THREE.Vector3(
-                        xyPositions[j][i].x - unitCubeSideLength * 0.25,
-                        xyPositions[j][i].y + unitCubeSideLength * 0.25,
-                        xyPositions[j][i].z - unitCubeSideLength * 0.5),
+                        xyPositions[j][i].x + unitCubeSideLength * 0.25,
+                        xyPositions[j][i].y - unitCubeSideLength * 0.25,
+                        xyPositions[j][i].z),
                         new THREE.Vector3(0, 0, 1));
                 }
 

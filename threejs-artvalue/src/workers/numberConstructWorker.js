@@ -33,125 +33,67 @@ self.onmessage = function (e) {
         }
     }
 
-    // let fontLoader = new THREE.FontLoader();
+    console.log("Collision started");
 
-    // fontLoader.load(numberFont, function (font) {
-    //     let currentGeometry = new THREE.TextGeometry(numberText, {
-    //         font: font,
-    //         size: standardNumberSize,
-    //         height: 1,
-    //         curveSegments: 64,
-    //         bevelEnabled: false,
-    //         bevelThickness: 0.1,
-    //         bevelSize: 0.1,
-    //         bevelOffset: 0,
-    //         bevelSegments: 5
-    //     });
+    let workers, running;
+    let supersamplingCollisions = [[], [], [], []];
+    let xyCollisions = [];
 
-    //     currentGeometry.center();
-    //     let currentMesh = new THREE.Mesh(currentGeometry, new THREE.MeshBasicMaterial({ color: 0xFFFFFF }));
-    //     currentMesh.position.set(currentPos.x, currentPos.y, currentPos.z);
+    running = 0;
+    for (let n = 0; n < 4; n++) {
 
-    //     let matrixScaling = new THREE.Matrix4();
-    //     matrixScaling.makeScale(numberMeshScale, numberMeshScale, numberMeshScale * numberDepthScalingFactor);
-    //     currentMesh.geometry.applyMatrix4(matrixScaling);
+        console.log("running: " + running);
 
-    //     collisionRayCaster0.layers.set(1);
-    //     currentMesh.layers.enable(1);
-    //     currentMesh.material.side = THREE.DoubleSide;
-    //     currentMesh.updateMatrixWorld();
+        workers = new Worker(new URL('./colliderSupersamplingWorker.js', import.meta.url));
+        workers.postMessage({
+            id: n,
+            unitCubeNumber: unitCubeNumber,
+            xyPositions: xyzPositions[0],
+            numberDepth: numberDepth,
+            unitCubeSideLength: unitCubeSideLength,
+            numberFont: numberFont,
+            numberText: numberText,
+            standardNumberSize: standardNumberSize,
+            numberMeshScale: numberMeshScale,
+            numberDepthScalingFactor: numberDepthScalingFactor,
+            currentPos: currentPos
+        });
+        workers.onmessage = workerDone;
+        ++running;
+    }
 
-        console.log("Collision started");
-
-        let workers, running;
-        let workerURL = new URL('./colliderSupersamplingWorker.js', import.meta.url);
-        let supersamplingCollisions = [[], [], [], []];
-        let xyCollisions = [];
-
-        running = 0;
-        for (let n = 0; n < 4; n++) {
-            console.log("running: " + running);
-
-            workers = new Worker(workerURL);
-            workers.postMessage({
-                id: n,
-                unitCubeNumber: unitCubeNumber,
-                xyPositions: xyzPositions[0],
-                numberDepth: numberDepth,
-                unitCubeSideLength: unitCubeSideLength,
-                numberFont: numberFont,
-                numberText: numberText,
-                standardNumberSize: standardNumberSize,
-                numberMeshScale: numberMeshScale,
-                numberDepthScalingFactor: numberDepthScalingFactor,
-                currentPos: currentPos
-            });
-            workers.onmessage = workerDone;
-            ++running;
-        }
-
-        function workerDone(e) {
-            --running;
-            supersamplingCollisions[e.data.id] = e.data.xyCollisions;
-            if (running === 0) {
-                for (let k = 0; k < unitCubeNumber; k++) {
-                    for (let j = 0; j < unitCubeNumber; j++) {
-                        if (k === 0) xyCollisions.push([]);
-                        for (let i = 0; i < unitCubeNumber; i++) {
-                            if (k === 0) {
-                                if ((supersamplingCollisions[0][j][i] && supersamplingCollisions[3][j][i]) ||
-                                    (supersamplingCollisions[1][j][i] && supersamplingCollisions[2][j][i])) {
-                                    collisions.push(true);
-                                    xyCollisions[j].push(true);
+    function workerDone(e) {
+        --running;
+        supersamplingCollisions[e.data.id] = e.data.xyCollisions;
+        if (running === 0) {
+            for (let k = 0; k < unitCubeNumber; k++) {
+                for (let j = 0; j < unitCubeNumber; j++) {
+                    if (k === 0) xyCollisions.push([]);
+                    for (let i = 0; i < unitCubeNumber; i++) {
+                        if (k === 0) {
+                            let collisionCounter = 0;
+                            for (let n = 0; n < 4; n++) {
+                                if (supersamplingCollisions[n][j][i]) {
+                                    collisionCounter++;
                                 }
-                                else {
-                                    collisions.push(false);
-                                    xyCollisions[j].push(false);
-                                }
+                            }
+                            if (collisionCounter >= 2) {
+                                collisions.push(true);
+                                xyCollisions[j].push(true);
                             }
                             else {
-                                collisions.push(xyCollisions[j][i]);
+                                collisions.push(false);
+                                xyCollisions[j].push(false);
                             }
+                        }
+                        else {
+                            collisions.push(xyCollisions[j][i]);
                         }
                     }
                 }
-                console.log("Collision finished");
-                self.postMessage([positions, collisions]);
             }
+            console.log("Collision finished");
+            self.postMessage([positions, collisions]);
         }
-
-        //let xyCollisions = []
-        // for (let k = 0; k < unitCubeNumber; k++) {
-        //     for (let j = 0; j < unitCubeNumber; j++) {
-        //         if (k === 0) xyCollisions.push([]);
-        //         for (let i = 0; i < unitCubeNumber; i++) {
-
-        //             if (k === 0) {
-        //                 collisionRayCaster0.set(new THREE.Vector3(
-        //                     xyzPositions[k][j][i].x - unitCubeSideLength / 2,
-        //                     xyzPositions[k][j][i].y + unitCubeSideLength / 2,
-        //                     xyzPositions[k][j][i].z - unitCubeSideLength / 2),
-        //                     new THREE.Vector3(0, 0, 1));
-
-        //                 collisionRayCaster0.far = numberDepth;
-
-        //                 const collisionRayIntersects = collisionRayCaster0.intersectObject(currentMesh);
-
-        //                 if (collisionRayIntersects.length > 0) {
-        //                     collisions.push(true);
-        //                     xyCollisions[j].push(true);
-        //                 }
-        //                 else {
-        //                     collisions.push(false);
-        //                     xyCollisions[j].push(false);
-        //                 }
-        //             }
-
-        //             else {
-        //                 collisions.push(xyCollisions[j][i]);
-        //             }
-        //         }
-        //     }
-        // }
-    //});
+    }
 }

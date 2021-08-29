@@ -102,7 +102,7 @@ materialNumber.opacity = 0.5;
 
 const materialCube = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
 materialCube.transparent = true;
-materialCube.opacity = 0.5;
+materialCube.opacity = 0.4;
 
 const materialEmpty = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
 materialEmpty.transparent = true;
