@@ -200,7 +200,7 @@ export class NumberConstruct {
 
         console.log("generateCubeConstraint started");
 
-        scene.remove(this.currentMesh);
+        //scene.remove(this.currentMesh);
 
         this.cubeSideLength = Math.max(this.boundingBoxSize.x, this.boundingBoxSize.y) * 1.1 + 0.4;
 
@@ -221,7 +221,7 @@ export class NumberConstruct {
 
 
         let webWorker = new Worker(new URL('./workers/numberConstructWorker.js', import.meta.url));
-        webWorker.postMessage([this.currentPos, unitCubeNumber, unitCubeSideLength, this.numberText, this.numberFont, this.numberMeshScale, this.numberDepthScalingFactor, this.standardNumberSize, this.cubeSideLength + 1]);
+        webWorker.postMessage([this.currentPos, unitCubeNumber, unitCubeSideLength, this.cubeSideLength, this.numberText, this.numberFont, this.numberMeshScale, this.numberDepthScalingFactor, this.standardNumberSize, this.cubeSideLength + 1]);
         webWorker.onmessage = e => {
 
             console.log("Collision message received");
@@ -258,7 +258,6 @@ export class NumberConstruct {
             this.instancedMesh.castShadow = true;
 
             scene.add(this.instancedMesh);
-
 
             renderer.render(scene, camera);
 

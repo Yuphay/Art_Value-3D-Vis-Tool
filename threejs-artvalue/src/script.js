@@ -2,6 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import * as dat from 'dat.gui';
 import Stats from 'stats.js/src/Stats.js';
 
@@ -56,13 +57,13 @@ document.body.appendChild(stats.domElement);
 // State Control
 const states = ['None', 'Room 1', 'Room 2', 'Room 3', 'Room 4'];
 const roomPositions = [new THREE.Vector3(-20, 8, -50), new THREE.Vector3(-20, 10.5, -130)];
+const ceilingLightPositions = [new THREE.Vector3(-40, 35, -40), new THREE.Vector3(-40, 35, -110), new THREE.Vector3(-110, 35, -110), new THREE.Vector3(-110, 35, -40)];
 
 let previousState = states[0];
 let currentState = states[1];
 
 let activeButtons = [];
 let environmentObjects = [];
-
 
 // Canvas
 const canvas = document.querySelector('canvas.webgl');
@@ -80,6 +81,7 @@ const normalTexture = textureLoader.load('/textures/seamless_brick_rock_wall_nor
 });
 
 const gltfLoader = new GLTFLoader();
+const objLoader = new OBJLoader();
 
 // Objects
 const boxGeometry = new THREE.BoxGeometry(2, 1, 0.4);
@@ -120,7 +122,7 @@ materialSelected.opacity = 0.7;
 /**
  * Lights
  */
-const ambientLight = new THREE.AmbientLight(0xFFFFFF, 1);
+const ambientLight = new THREE.AmbientLight(0xFFFFFF, 1.0);
 scene.add(ambientLight);
 
 const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 5.0);
@@ -129,15 +131,15 @@ directionalLight.shadow.mapSize.width = 2048;
 directionalLight.shadow.mapSize.height = 2048;
 directionalLight.shadow.camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.5, 50);
 
-directionalLight.shadow.normalBias = 0.01;
-directionalLight.shadow.bias = 0.0002;
+directionalLight.shadow.normalBias = 0.1;
+directionalLight.shadow.bias = 0.0001;
 
 const directionalLightControl = gui.addFolder("Directional Light");
 directionalLightControl.add(directionalLight.position, 'x').min(0).max(50).step(0.01).listen();
 directionalLightControl.add(directionalLight.position, 'y').min(0).max(100).step(0.01).listen();
 directionalLightControl.add(directionalLight.position, 'z').min(0).max(50).step(0.01).listen();
 directionalLightControl.add(directionalLight, 'intensity').min(0).max(10).step(0.01).listen();
-directionalLightControl.add(GUIOptions, 'lightHelperFlag').name('Light Helper').onChange(lightHelperCallback);
+directionalLightControl.add(GUIOptions, 'lightHelperFlag').name('Light Helper').onChange(directionalLightHelperCallback);
 
 const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 2, new THREE.Color('yellow'));
 directionalLightHelper.name = 'lightHelper';
@@ -145,7 +147,7 @@ directionalLightHelper.name = 'lightHelper';
 const directionalLightCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
 scene.add(directionalLightCameraHelper);
 
-function lightHelperCallback() {
+function directionalLightHelperCallback() {
     if (GUIOptions.lightHelperFlag && !GUIOptions.lightHelperEnabled) {
         scene.add(directionalLightHelper);
         GUIOptions.lightHelperEnabled = true;
@@ -156,6 +158,43 @@ function lightHelperCallback() {
     }
     requestRenderIfNotRequested('lightHelperCallback');
 }
+
+const ceilingLight0 = new THREE.PointLight(0xFFFFFF, 50, 150);
+ceilingLight0.position.set(ceilingLightPositions[0].x, ceilingLightPositions[0].y - 1.5, ceilingLightPositions[0].z);
+ceilingLight0.castShadow = true;
+ceilingLight0.shadow.mapSize.width = 2048;
+ceilingLight0.shadow.mapSize.height = 2048;
+ceilingLight0.shadow.normalBias = 0.1;
+ceilingLight0.shadow.bias = 0.0001;
+scene.add(ceilingLight0);
+
+const ceilingLight1 = new THREE.PointLight(0xFFFFFF, 50, 150);
+ceilingLight1.position.set(ceilingLightPositions[1].x, ceilingLightPositions[1].y - 1.5, ceilingLightPositions[1].z);
+ceilingLight1.castShadow = true;
+ceilingLight1.shadow.mapSize.width = 2048;
+ceilingLight1.shadow.mapSize.height = 2048;
+ceilingLight1.shadow.normalBias = 0.1;
+ceilingLight1.shadow.bias = 0.0001;
+scene.add(ceilingLight1);
+
+const ceilingLight2 = new THREE.PointLight(0xFFFFFF, 50, 150);
+ceilingLight2.position.set(ceilingLightPositions[2].x, ceilingLightPositions[2].y - 1.5, ceilingLightPositions[2].z);
+ceilingLight2.castShadow = true;
+ceilingLight2.shadow.mapSize.width = 2048;
+ceilingLight2.shadow.mapSize.height = 2048;
+ceilingLight2.shadow.normalBias = 0.1;
+ceilingLight2.shadow.bias = 0.0001;
+scene.add(ceilingLight2);
+
+const ceilingLight3 = new THREE.PointLight(0xFFFFFF, 50, 150);
+ceilingLight3.position.set(ceilingLightPositions[3].x, ceilingLightPositions[3].y - 1.5, ceilingLightPositions[3].z);
+ceilingLight3.castShadow = true;
+ceilingLight3.shadow.mapSize.width = 2048;
+ceilingLight3.shadow.mapSize.height = 2048;
+ceilingLight3.shadow.normalBias = 0.1;
+ceilingLight3.shadow.bias = 0.0001;
+scene.add(ceilingLight3);
+
 
 /**
  * Sizes
@@ -192,6 +231,9 @@ const camera = new THREE.PerspectiveCamera(40, sizes.width / sizes.height, 0.1, 
 // Camera controls
 const orbitControls = new OrbitControls(camera, canvas);
 orbitControls.enableDamping = false;
+orbitControls.rotateSpeed = 0.4;
+orbitControls.panSpeed = 0.4;
+orbitControls.zoomSpeed = 0.4;
 orbitControls.target = new THREE.Vector3(roomPositions[0].x, roomPositions[0].y, roomPositions[0].z);
 orbitControls.update();
 
@@ -234,7 +276,7 @@ const updateAllMaterials = () => {
 }
 
 /**
- * Setting up the scene
+ * Setting up main scene
  */
 function init() {
 
@@ -243,21 +285,46 @@ function init() {
     camera.position.set(roomPositions[0].x, roomPositions[0].y, roomPositions[0].z + 20);
     scene.add(camera);
 
-    // TODO: loading progress bar animation
-    gltfLoader.load(
-        '/models/NumberGallery/NumberGallery.gltf',
-        (gltf) => {
-            console.log("Gallery models loaded!");
-            gltf.scene.scale.set(5, 5, 5);
-            gltf.scene.position.set(0, 0, 0);
-            environmentObjects.push(gltf.scene);
-            scene.add(gltf.scene);
-            updateAllMaterials();
+    const galleryAsyncLoading = gltfLoader.loadAsync('/models/NumberGallery/glb/NumberGallery.glb');
 
-            newNumber.addNumberMesh(renderer, scene, camera, materialNumber);
-            previousState = currentState;
-        }
-    )
+    const ceilingLightAsyncLoading = objLoader.loadAsync('/models/Lights/CeilingLight.obj');
+
+    Promise.all([galleryAsyncLoading, ceilingLightAsyncLoading]).then(models => {
+        console.log("Models loaded!");
+        const gallery = models[0];
+        gallery.scene.scale.set(5, 5, 5);
+        gallery.scene.position.set(0, 0, 0);
+        environmentObjects.push(gallery.scene);
+        scene.add(gallery.scene);
+
+        const ceilingLight0 = models[1].clone();
+        ceilingLight0.scale.set(0.1, 0.1, 0.1);
+        ceilingLight0.position.set(ceilingLightPositions[0].x, ceilingLightPositions[0].y, ceilingLightPositions[0].z);
+        environmentObjects.push(ceilingLight0);
+        scene.add(ceilingLight0);
+
+        const ceilingLight1 = models[1].clone();
+        ceilingLight1.scale.set(0.1, 0.1, 0.1);
+        ceilingLight1.position.set(ceilingLightPositions[1].x, ceilingLightPositions[1].y, ceilingLightPositions[1].z);
+        environmentObjects.push(ceilingLight1);
+        scene.add(ceilingLight1);
+
+        const ceilingLight2 = models[1].clone();
+        ceilingLight2.scale.set(0.1, 0.1, 0.1);
+        ceilingLight2.position.set(ceilingLightPositions[2].x, ceilingLightPositions[2].y, ceilingLightPositions[2].z);
+        environmentObjects.push(ceilingLight2);
+        scene.add(ceilingLight2);
+
+        const ceilingLight3 = models[1].clone();
+        ceilingLight3.scale.set(0.1, 0.1, 0.1);
+        ceilingLight3.position.set(ceilingLightPositions[3].x, ceilingLightPositions[3].y, ceilingLightPositions[3].z);
+        environmentObjects.push(ceilingLight3);
+        scene.add(ceilingLight3);
+
+        updateAllMaterials();
+        newNumber.addNumberMesh(renderer, scene, camera, materialNumber);
+        previousState = currentState;
+    })
 }
 
 
@@ -306,7 +373,7 @@ function enterNewState() {
     else if (currentState === states[2]) {
         newNumber.updateNumberMeshPos(scene, new THREE.Vector3(roomPositions[1].x, roomPositions[1].y, roomPositions[1].z));
 
-        newNumber.generateCubeConstraint(renderer, scene, camera, 100, materialCube);
+        newNumber.generateCubeConstraint(renderer, scene, camera, 128, materialCube);
 
         camera.position.set(
             newNumber.getNumberMeshPos().x,
@@ -340,6 +407,9 @@ function enterNewState() {
     activeButtons.push(previousStepButton, nextStepButton);
     scene.add(nextStepButton);
     scene.add(previousStepButton);
+
+    orbitControls.saveState();
+    console.log("Orbit control state saved");
 }
 
 window.addEventListener('mousemove', onMouseMove, false);
@@ -387,6 +457,7 @@ function onClick(event) {
  */
 
 //const clock = new THREE.Clock();
+let cameraCollisionDetectionVector;
 
 const tick = () => {
 
@@ -431,13 +502,31 @@ const tick = () => {
     }
 
     if (!devMode) {
-        cameraRayCaster.set(orbitControls.target, new THREE.Vector3(camera.position.x - orbitControls.target.x,
-            camera.position.y - orbitControls.target.y, camera.position.z - orbitControls.target.z).normalize());
+        cameraCollisionDetectionVector = new THREE.Vector3(camera.position.x - orbitControls.target.x,
+            camera.position.y - orbitControls.target.y, camera.position.z - orbitControls.target.z);
+
+        cameraRayCaster.far = cameraCollisionDetectionVector.length() + 2;
+
+        cameraRayCaster.set(orbitControls.target, cameraCollisionDetectionVector.normalize());
 
         const cameraRayIntersects = cameraRayCaster.intersectObjects(environmentObjects, true);
 
         if (cameraRayIntersects.length > 0) {
-            orbitControls.maxDistance = cameraRayIntersects[0].distance - 1;
+            orbitControls.enableZoom = false;
+            let newDistance = cameraRayIntersects[0].distance - 2.1;
+            if (newDistance > 2) {
+                orbitControls.maxDistance = newDistance;
+            }
+            else {
+                orbitControls.reset();
+                orbitControls.minDistance = 20;
+                orbitControls.update();
+                orbitControls.minDistance = 0;
+            }
+        }
+        else {
+            orbitControls.maxDistance = 200;
+            orbitControls.enableZoom = true;
         }
     }
 

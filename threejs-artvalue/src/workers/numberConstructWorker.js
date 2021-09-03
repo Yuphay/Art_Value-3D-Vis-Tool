@@ -5,12 +5,13 @@ self.onmessage = function (e) {
     const currentPos = e.data[0];
     const unitCubeNumber = e.data[1];
     const unitCubeSideLength = e.data[2];
-    const numberText = e.data[3];
-    const numberFont = e.data[4];
-    const numberMeshScale = e.data[5];
-    const numberDepthScalingFactor = e.data[6];
-    const standardNumberSize = e.data[7];
-    const numberDepth = e.data[8];
+    const cubeSideLength = e.data[3];
+    const numberText = e.data[4];
+    const numberFont = e.data[5];
+    const numberMeshScale = e.data[6];
+    const numberDepthScalingFactor = e.data[7];
+    const standardNumberSize = e.data[8];
+    const numberDepth = e.data[9];
 
     let positions = [];
     let collisions = [];
@@ -22,9 +23,9 @@ self.onmessage = function (e) {
             xyzPositions[k].push([]);
             for (let i = 0; i < unitCubeNumber; i++) {
                 const cubePos = new THREE.Vector3(
-                    currentPos.x + (i + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber,
-                    currentPos.y + (j + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber,
-                    currentPos.z + (k + 0.5) * unitCubeSideLength - 0.5 * unitCubeSideLength * unitCubeNumber);
+                    currentPos.x + (i + 0.5) * unitCubeSideLength - 0.5 * cubeSideLength,
+                    currentPos.y + (j + 0.5) * unitCubeSideLength - 0.5 * cubeSideLength,
+                    currentPos.z + (k + 0.5) * unitCubeSideLength - 0.5 * cubeSideLength);
 
                 positions.push(cubePos);
 
@@ -71,13 +72,11 @@ self.onmessage = function (e) {
                     if (k === 0) xyCollisions.push([]);
                     for (let i = 0; i < unitCubeNumber; i++) {
                         if (k === 0) {
-                            let collisionCounter = 0;
+                            let collisionCount = 0;
                             for (let n = 0; n < 4; n++) {
-                                if (supersamplingCollisions[n][j][i]) {
-                                    collisionCounter++;
-                                }
+                                collisionCount += supersamplingCollisions[n][j][i];
                             }
-                            if (collisionCounter >= 2) {
+                            if (collisionCount >= 4) {
                                 collisions.push(true);
                                 xyCollisions[j].push(true);
                             }
