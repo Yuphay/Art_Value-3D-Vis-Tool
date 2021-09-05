@@ -51,7 +51,8 @@ export class NumberConstruct {
         return this.cubeSideLength;
     }
 
-    addNumberMesh(renderer, scene, camera, material, numberValue = this.numberValue, numberStyle = this.numberStyle, numberFont = this.numberFont) {
+    addNumberMesh(renderer, scene, camera, material, addMesh = true, numberValue = this.numberValue, numberStyle = this.numberStyle, numberFont = this.numberFont,
+        size = this.standardNumberSize, rotationAngle = 0) {
 
         console.log("addNumberMesh started");
 
@@ -65,50 +66,56 @@ export class NumberConstruct {
         this.matchFont();
         this.numberToText();
 
-        this.fontLoader.load(this.numberFont, function (font) {
-            this.currentGeometry = new THREE.TextGeometry(this.numberText, {
-                font: font,
-                size: this.standardNumberSize,
-                height: 1,
-                curveSegments: 64,
-                bevelEnabled: false,
-                bevelThickness: 0.1,
-                bevelSize: 0.1,
-                bevelOffset: 0,
-                bevelSegments: 5
-            });
+        return new Promise(resolve => {
+            this.fontLoader.load(this.numberFont, function (font) {
+                this.currentGeometry = new THREE.TextGeometry(this.numberText, {
+                    font: font,
+                    size: size,
+                    height: 1,
+                    curveSegments: 64,
+                    bevelEnabled: false,
+                    bevelThickness: 0.1,
+                    bevelSize: 0.1,
+                    bevelOffset: 0,
+                    bevelSegments: 5
+                });
 
-            material.transparent = true;
-            material.opacity = 0.0;
-            this.currentGeometry.center();
-            this.currentMesh = new THREE.Mesh(this.currentGeometry, material);
-            this.currentMesh.material.opacity = 0.5;
+                material.transparent = true;
+                material.opacity = 0.0;
+                this.currentGeometry.center();
+                this.currentMesh = new THREE.Mesh(this.currentGeometry, material);
+                this.currentMesh.material.opacity = 1.0;
 
-            this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
+                this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
 
-            let boundingBox = new THREE.Box3();
-            let boundingBoxSizeTemp = new THREE.Vector3();
-            boundingBox.setFromObject(this.currentMesh);
-            boundingBox.getSize(boundingBoxSizeTemp);
+                let boundingBox = new THREE.Box3();
+                let boundingBoxSizeTemp = new THREE.Vector3();
+                boundingBox.setFromObject(this.currentMesh);
+                boundingBox.getSize(boundingBoxSizeTemp);
 
-            this.numberMeshScale = this.standardNumberSize / boundingBoxSizeTemp.y;
-            //this.currentMesh.scale.set(this.numberMeshScale, this.numberMeshScale, this.numberMeshScale);
-            let matrixScaling = new THREE.Matrix4();
-            matrixScaling.makeScale(this.numberMeshScale, this.numberMeshScale, this.numberMeshScale);
-            this.currentMesh.geometry.applyMatrix4(matrixScaling);
+                this.numberMeshScale = boundingBoxSizeTemp.x * size / boundingBoxSizeTemp.y <= 14 ? size / boundingBoxSizeTemp.y : 14 / boundingBoxSizeTemp.x;
+                //this.currentMesh.scale.set(this.numberMeshScale, this.numberMeshScale, this.numberMeshScale);
+                let matrixScaling = new THREE.Matrix4();
+                matrixScaling.makeScale(this.numberMeshScale, this.numberMeshScale, 1);
+                this.currentMesh.geometry.applyMatrix4(matrixScaling);
+                this.currentMesh.setRotationFromAxisAngle(new THREE.Vector3(0, 1, 0), rotationAngle);
 
-            boundingBox.setFromObject(this.currentMesh);
-            boundingBox.getSize(boundingBoxSizeTemp);
+                boundingBox.setFromObject(this.currentMesh);
+                boundingBox.getSize(boundingBoxSizeTemp);
 
-            this.boundingBoxSize.set(boundingBoxSizeTemp.x, boundingBoxSizeTemp.y, boundingBoxSizeTemp.z);
+                this.boundingBoxSize.set(boundingBoxSizeTemp.x, boundingBoxSizeTemp.y, boundingBoxSizeTemp.z);
 
-            scene.add(this.currentMesh);
+                if (addMesh) scene.add(this.currentMesh);
 
-            renderer.render(scene, camera);
+                //renderer.render(scene, camera);
 
-            console.log("addNumberMesh finished");
+                console.log("addNumberMesh finished");
 
-        }.bind(this));
+                resolve(true);
+
+            }.bind(this));
+        });
+
     }
 
     matchFont() {
@@ -218,7 +225,6 @@ export class NumberConstruct {
         //     mesh.castShadow = true;
         //     this.unitCubeGroup.add(unitCubeGeometry);
         // }
-
 
         let webWorker = new Worker(new URL('./workers/numberConstructWorker.js', import.meta.url));
         webWorker.postMessage([this.currentPos, unitCubeNumber, unitCubeSideLength, this.cubeSideLength, this.numberText, this.numberFont, this.numberMeshScale, this.numberDepthScalingFactor, this.standardNumberSize, this.cubeSideLength + 1]);
