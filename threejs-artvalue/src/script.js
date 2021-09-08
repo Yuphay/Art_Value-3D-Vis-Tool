@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader.js';
 import * as dat from 'dat.gui';
 import Stats from 'stats.js/src/Stats.js';
 
@@ -74,6 +75,12 @@ let environmentObjects = [];
 let cameraOffset = 30;
 let room1TargetOffset = 5;
 
+let iconScaled = false;
+const iconScalar = 0.0002;
+let iconAnimCounter = 0;
+const targetIconAnimScale = new THREE.Vector3(0.4 * iconScalar, -0.4 * iconScalar, 0.4 * iconScalar);
+let svgAdded = false;
+
 // Canvas
 const canvas = document.querySelector('canvas.webgl');
 
@@ -88,12 +95,16 @@ const normalTexture = textureLoader.load('/textures/seamless_brick_rock_wall_nor
     // tex and normalTexture are the same here, but that might not always be the case
     //console.log("normalTexture", tex.image.width, tex.image.height);
 });
+
 const fontLoader = new THREE.FontLoader();
-let fontUITitle;
-let fontUIContent;
 
 const gltfLoader = new GLTFLoader();
 const objLoader = new OBJLoader();
+
+// Groups
+const leftClickIcon = new THREE.Group();
+const middleWheelIcon = new THREE.Group();
+const rightClickIcon = new THREE.Group();
 
 // Geometry
 const buttonGeometry = new THREE.BoxGeometry(4.5, 0.6, 0.4);
@@ -294,6 +305,7 @@ let savedCamPos = new THREE.Vector3(roomPositions[0].x + room1TargetOffset, room
 
 // animation
 let cameraAnimation = false;
+let iconAnimation = false;
 let targetCamPosition = new THREE.Vector3(0, 0, 0);
 let targetCamOrientation = new THREE.Quaternion();
 
@@ -394,6 +406,8 @@ async function init() {
             if (UILoaded) console.log("UI loaded!");
             renderer.compile(scene, camera);
 
+            loadSVG(['/svg/mouse_left_click.svg', '/svg/mouse_wheel.svg', '/svg/mouse_right_click.svg',
+                '/svg/camera_rotate.svg', '/svg/camera_zoom.svg', '/svg/camera_pan.svg']);
             cameraAnimationDispatcher(savedCamPos, new THREE.Euler(0, 0, 0, 'XYZ'));
             orbitControls.target = new THREE.Vector3(mainNumber.getNumberMeshPos().x + room1TargetOffset, mainNumber.getNumberMeshPos().y, mainNumber.getNumberMeshPos().z + cameraOffset / 2);
         });
@@ -536,6 +550,12 @@ function onMouseMove(event) {
 }
 
 function onClick(event) {
+
+    if (!iconScaled) {
+        iconAnimation = true;
+        iconScaled = true;
+    }
+
     if (styleButton.material === materialSelected) {
         if (states.indexOf(currentState) < states.length - 1) {
             currentState = states[states.indexOf(currentState) + 1];
@@ -570,10 +590,21 @@ const tick = () => {
     if (sceneLoaded && UILoaded) {
         orbitControls.update();
 
-        if (!orbitControls.enabled && !cameraAnimation) {
+        updateUIIconGroup();
+
+        if (!orbitControls.enabled && !cameraAnimation && !iconAnimation) {
             console.log('orbitControls enabled');
             orbitControls.enabled = true;
             orbitControls.addEventListener('change', requestRenderIfNotRequested);
+
+            if (!svgAdded) {
+                updateUIIconGroup();
+                scene.add(leftClickIcon);
+                scene.add(middleWheelIcon);
+                scene.add(rightClickIcon);
+                requestRenderIfNotRequested('SVG icons added');
+                svgAdded = true;
+            }
         }
 
         if (previousState !== currentState) {
@@ -641,9 +672,6 @@ const tick = () => {
         }
     }
 
-    // Debug
-    stats.update();
-
     // Camera animation
     if (cameraAnimation) {
         orbitControls.enabled = false;
@@ -656,6 +684,71 @@ const tick = () => {
         }
         requestRenderIfNotRequested('cameraAnimation');
     }
+
+
+    // Icon animation
+    if (iconAnimation) {
+        orbitControls.enabled = false;
+
+        //targetLeftClickIconPos = new THREE.Vector3(sizes.width / 2 * iconScalar, sizes.height / 2 * iconScalar, 0);
+        console.log('Icon Animation');
+        leftClickIcon.scale.lerp(targetIconAnimScale, 0.02);
+        //leftClickIcon.position.lerp(targetLeftClickIconPos, 0.01);
+        for (let i = 0; i < leftClickIcon.children.length; i++) {
+            leftClickIcon.children[i].translateX(-0.004 / iconScalar);
+            leftClickIcon.children[i].translateY(0.0068 / iconScalar);
+        }
+        middleWheelIcon.scale.lerp(targetIconAnimScale, 0.02);
+        for (let i = 0; i < middleWheelIcon.children.length; i++) {
+            middleWheelIcon.children[i].translateX(-0.002 / iconScalar);
+            middleWheelIcon.children[i].translateY(0.0058 / iconScalar);
+        }
+        rightClickIcon.scale.lerp(targetIconAnimScale, 0.02);
+        for (let i = 0; i < rightClickIcon.children.length; i++) {
+            rightClickIcon.children[i].translateX(0 / iconScalar);
+            rightClickIcon.children[i].translateY(0.0048 / iconScalar);
+        }
+
+        iconAnimCounter++;
+        if (iconAnimCounter > 130) {
+            iconAnimation = false;
+            for (let i = 0; i < leftClickIcon.children.length; i++) {
+                if (i === leftClickIcon.children.length - 1 ||
+                    i === leftClickIcon.children.length - 2 ||
+                    i === leftClickIcon.children.length - 3) {
+                    leftClickIcon.children[i].material.opacity *= 0.5;
+                }
+                else {
+                    leftClickIcon.children[i].material.opacity *= 0.7;
+                }
+            }
+            for (let i = 0; i < middleWheelIcon.children.length; i++) {
+                if (i === middleWheelIcon.children.length - 3 ||
+                    i === middleWheelIcon.children.length - 4) {
+                    middleWheelIcon.children[i].material.opacity *= 0.5;
+                }
+                else {
+                    middleWheelIcon.children[i].material.opacity *= 0.7;
+                }
+            }
+            for (let i = 0; i < rightClickIcon.children.length; i++) {
+                if (i === rightClickIcon.children.length - 1 ||
+                    i === rightClickIcon.children.length - 2 ||
+                    i === rightClickIcon.children.length - 3 ||
+                    i === rightClickIcon.children.length - 4) {
+                    rightClickIcon.children[i].material.opacity *= 0.5;
+                }
+                else {
+                    rightClickIcon.children[i].material.opacity *= 0.7;
+                }
+            }
+        }
+
+        requestRenderIfNotRequested('iconAnimation');
+    }
+
+    // Debug
+    stats.update();
 
     // Call tick again on the next frame
     window.requestAnimationFrame(tick);
@@ -679,6 +772,15 @@ function requestRenderIfNotRequested(caller) {
     }
 }
 
+init();
+
+tick();
+
+
+/**
+ * Utility Functions
+ */
+
 function cameraAnimationDispatcher(targetPos, targetOrientation) {
     targetCamPosition = new THREE.Vector3(targetPos.x, targetPos.y, targetPos.z);
     targetCamOrientation.setFromEuler(targetOrientation);
@@ -687,7 +789,7 @@ function cameraAnimationDispatcher(targetPos, targetOrientation) {
 
 function loadingUIInit() {
     return new Promise(resolve => {
-        fontUITitle = fontLoader.load('/fonts/Avenir Black_Regular.json', function (font) {
+        fontLoader.load('/fonts/Avenir Black_Regular.json', function (font) {
             UITitleGeometry1 = new THREE.TextGeometry('Customization Panel', {
                 font: font,
                 size: 0.32,
@@ -765,8 +867,7 @@ function loadingUIInit() {
             UIInstructionMesh5.position.set(mainNumber.getNumberMeshPos().x, mainNumber.getNumberMeshPos().y - 0.8, mainNumber.getNumberMeshPos().z);
             scene.add(UIInstructionMesh5);
 
-
-            fontUIContent = fontLoader.load('/fonts/Avenir Book_Regular.json', function (font) {
+            fontLoader.load('/fonts/Avenir Book_Regular.json', function (font) {
                 UIContentGeometry1 = new THREE.TextGeometry(GUIOptions.numberStyle, {
                     font: font,
                     size: 0.24,
@@ -870,6 +971,181 @@ function degreesToRadians(degrees) {
     return degrees * (Math.PI / 180);
 }
 
-init();
+async function loadSVG(urls) {
 
-tick();
+    const svgLoaders = [new SVGLoader(), new SVGLoader(), new SVGLoader(), new SVGLoader(), new SVGLoader(), new SVGLoader()];
+    let promises = [];
+
+    for (let n = 0; n < urls.length; n++) {
+        promises.push(svgLoaders[n].loadAsync(urls[n]));
+    }
+
+    Promise.all([promises[0], promises[1], promises[2], promises[3], promises[4], promises[5]]).then(data => {
+
+        for (let n = 0; n < urls.length; n++) {
+            const paths = data[n].paths;
+
+            for (let i = 0; i < paths.length; i++) {
+
+                const path = paths[i];
+
+                const fillColor = path.userData.style.fill;
+
+                if (fillColor !== undefined && fillColor !== 'none') {
+
+                    const material = new THREE.MeshBasicMaterial({
+                        color: new THREE.Color().setStyle(fillColor),
+                        opacity: path.userData.style.fillOpacity,
+                        transparent: path.userData.style.fillOpacity < 1,
+                        side: THREE.DoubleSide,
+                        depthWrite: false,
+                        wireframe: false
+                    });
+
+                    const shapes = SVGLoader.createShapes(path);
+
+                    for (let j = 0; j < shapes.length; j++) {
+
+                        const shape = shapes[j];
+
+                        const geometry = new THREE.ShapeGeometry(shape);
+                        const mesh = new THREE.Mesh(geometry, material);
+
+                        if (n === 0) {
+                            leftClickIcon.add(mesh);
+                        }
+                        else if (n === 1) {
+                            middleWheelIcon.add(mesh);
+                        }
+                        else if (n === 2) {
+                            rightClickIcon.add(mesh);
+                        }
+                        else if (n === 3) {
+                            let matrixScaling = new THREE.Matrix4();
+                            matrixScaling.makeScale(30, 30, 1);
+                            mesh.applyMatrix4(matrixScaling);
+                            matrixScaling.makeTranslation(0.22 / iconScalar, -0.2 / iconScalar, 0);
+                            mesh.applyMatrix4(matrixScaling);
+                            leftClickIcon.add(mesh);
+                        }
+                        else if (n === 4) {
+                            let matrixScaling = new THREE.Matrix4();
+                            matrixScaling.makeScale(30, 30, 1);
+                            mesh.applyMatrix4(matrixScaling);
+                            matrixScaling.makeTranslation(0.22 / iconScalar, -0.07 / iconScalar, 0);
+                            mesh.applyMatrix4(matrixScaling);
+                            middleWheelIcon.add(mesh);
+                        }
+                        else if (n === 5) {
+                            let matrixScaling = new THREE.Matrix4();
+                            matrixScaling.makeScale(30, 30, 1);
+                            mesh.applyMatrix4(matrixScaling);
+                            matrixScaling.makeTranslation(0.22 / iconScalar, 0.06 / iconScalar, 0);
+                            mesh.applyMatrix4(matrixScaling);
+                            rightClickIcon.add(mesh);
+                        }
+                    }
+                }
+
+                const strokeColor = path.userData.style.stroke;
+
+                if (strokeColor !== undefined && strokeColor !== 'none') {
+
+                    const material = new THREE.MeshBasicMaterial({
+                        color: new THREE.Color().setStyle(strokeColor),
+                        opacity: path.userData.style.strokeOpacity,
+                        transparent: path.userData.style.strokeOpacity < 1,
+                        side: THREE.DoubleSide,
+                        depthWrite: false,
+                        wireframe: false
+                    });
+
+                    for (let j = 0, jl = path.subPaths.length; j < jl; j++) {
+
+                        const subPath = path.subPaths[j];
+
+                        const geometry = SVGLoader.pointsToStroke(subPath.getPoints(), path.userData.style);
+
+                        if (geometry) {
+
+                            const mesh = new THREE.Mesh(geometry, material);
+
+                            if (n === 0) {
+                                leftClickIcon.add(mesh);
+                            }
+                            else if (n === 1) {
+                                middleWheelIcon.add(mesh);
+                            }
+                            else if (n === 2) {
+                                rightClickIcon.add(mesh);
+                            }
+                            else if (n === 3) {
+                                let matrixScaling = new THREE.Matrix4();
+                                matrixScaling.makeScale(30, 30, 1);
+                                mesh.applyMatrix4(matrixScaling);
+                                matrixScaling.makeTranslation(0.22 / iconScalar, -0.2 / iconScalar, 0);
+                                mesh.applyMatrix4(matrixScaling);
+                                leftClickIcon.add(mesh);
+                            }
+                            else if (n === 4) {
+                                let matrixScaling = new THREE.Matrix4();
+                                matrixScaling.makeScale(30, 30, 1);
+                                mesh.applyMatrix4(matrixScaling);
+                                matrixScaling.makeTranslation(0.22 / iconScalar, -0.07 / iconScalar, 0);
+                                mesh.applyMatrix4(matrixScaling);
+                                middleWheelIcon.add(mesh);
+                            }
+                            else if (n === 5) {
+                                let matrixScaling = new THREE.Matrix4();
+                                matrixScaling.makeScale(30, 30, 1);
+                                mesh.applyMatrix4(matrixScaling);
+                                matrixScaling.makeTranslation(0.22 / iconScalar, 0.06 / iconScalar, 0);
+                                mesh.applyMatrix4(matrixScaling);
+                                rightClickIcon.add(mesh);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (n === 0) {
+                leftClickIcon.scale.multiplyScalar(iconScalar);
+                leftClickIcon.scale.y *= -1;
+
+                for (let i = 0; i < leftClickIcon.children.length; i++) {
+                    leftClickIcon.children[i].translateX(0.15 / iconScalar);
+                    leftClickIcon.children[i].translateY(-0.18 / iconScalar);
+                }
+            }
+            else if (n === 1) {
+                middleWheelIcon.scale.multiplyScalar(iconScalar);
+                middleWheelIcon.scale.y *= -1;
+
+                for (let i = 0; i < middleWheelIcon.children.length; i++) {
+                    middleWheelIcon.children[i].translateX(0.15 / iconScalar);
+                    middleWheelIcon.children[i].translateY(-0.05 / iconScalar);
+                }
+            }
+            else if (n === 2) {
+                rightClickIcon.scale.multiplyScalar(iconScalar);
+                rightClickIcon.scale.y *= -1;
+
+                for (let i = 0; i < rightClickIcon.children.length; i++) {
+                    rightClickIcon.children[i].translateX(0.15 / iconScalar);
+                    rightClickIcon.children[i].translateY(0.08 / iconScalar);
+                }
+            }
+        }
+    });
+}
+
+function updateUIIconGroup() {
+    let offsetVector = new THREE.Vector3(0, 0, 0);
+    camera.getWorldDirection(offsetVector);
+    leftClickIcon.position.addVectors(camera.position, offsetVector);
+    leftClickIcon.setRotationFromQuaternion(camera.quaternion);
+    middleWheelIcon.position.addVectors(camera.position, offsetVector);
+    middleWheelIcon.setRotationFromQuaternion(camera.quaternion);
+    rightClickIcon.position.addVectors(camera.position, offsetVector);
+    rightClickIcon.setRotationFromQuaternion(camera.quaternion);
+}
