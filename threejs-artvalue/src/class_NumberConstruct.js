@@ -23,6 +23,7 @@ export class NumberConstruct {
         this.instancedMesh;
         this.cubeSideLength = 0;
         this.numberDepthScalingFactor = 0;
+        this.generatingCubeAllowed = true;
         // this.collisionRayCaster0 = new THREE.Raycaster();
         // this.collisionRayCaster1 = new THREE.Raycaster();
         // this.collisionRayCaster2 = new THREE.Raycaster();
@@ -54,7 +55,7 @@ export class NumberConstruct {
     addNumberMesh(renderer, scene, camera, material, addMesh = true, numberValue = this.numberValue, numberStyle = this.numberStyle, numberFont = this.numberFont,
         size = this.standardNumberSize, rotationAngle = 0) {
 
-        console.log("addNumberMesh started");
+        //console.log("addNumberMesh started");
 
         scene.remove(this.currentMesh);
 
@@ -107,9 +108,9 @@ export class NumberConstruct {
 
                 if (addMesh) scene.add(this.currentMesh);
 
-                //renderer.render(scene, camera);
+                // renderer.render(scene, camera);
 
-                console.log("addNumberMesh finished");
+                //console.log("addNumberMesh finished");
 
                 resolve(true);
 
@@ -203,11 +204,13 @@ export class NumberConstruct {
         }
     }
 
-    generateCubeConstraint(renderer, scene, camera, unitCubeNumber, materialCube) {
+    async generateCubeConstraint(renderer, scene, camera, unitCubeNumber, materialCube) {
 
         console.log("generateCubeConstraint started");
 
-        //scene.remove(this.currentMesh);
+        this.generatingCubeAllowed = true;
+
+        scene.remove(this.currentMesh);
 
         this.cubeSideLength = Math.max(this.boundingBoxSize.x, this.boundingBoxSize.y) * 1.1 + 0.4;
 
@@ -218,56 +221,54 @@ export class NumberConstruct {
         let matrixScaling = new THREE.Matrix4();
         this.numberDepthScalingFactor = (this.cubeSideLength + 1) / this.boundingBoxSize.z;
         matrixScaling.makeScale(1, 1, this.numberDepthScalingFactor);
-        this.currentMesh.geometry.applyMatrix4(matrixScaling);
-        //this.currentMesh.scale.set(1, 1, this.cubeSideLength + 1);
+        //this.currentMesh.geometry.applyMatrix4(matrixScaling);
 
-        // for (let i = 0; i < unitCubeNumber * unitCubeNumber * unitCubeNumber; i++) {
-        //     mesh.castShadow = true;
-        //     this.unitCubeGroup.add(unitCubeGeometry);
-        // }
+        this.currentMesh.scale.set(1, 1, this.cubeSideLength + 1);
 
         let webWorker = new Worker(new URL('./workers/numberConstructWorker.js', import.meta.url));
         webWorker.postMessage([this.currentPos, unitCubeNumber, unitCubeSideLength, this.cubeSideLength, this.numberText, this.numberFont, this.numberMeshScale, this.numberDepthScalingFactor, this.standardNumberSize, this.cubeSideLength + 1]);
         webWorker.onmessage = e => {
+            if (this.generatingCubeAllowed) {
 
-            console.log("Collision message received");
+                console.log("Collision message received");
 
-            let positions = e.data[0];
-            let collisions = e.data[1];
+                let positions = e.data[0];
+                let collisions = e.data[1];
 
-            let newPositions = [];
-            let cubeCount = 0;
+                let newPositions = [];
+                let cubeCount = 0;
 
-            for (let i = 0; i < positions.length; i++) {
-                //this.unitCubeGroup.children[i].position.set(positions[i].x, positions[i].y, positions[i].z);
+                for (let i = 0; i < positions.length; i++) {
+                    //this.unitCubeGroup.children[i].position.set(positions[i].x, positions[i].y, positions[i].z);
 
-                if (!collisions[i]) {
-                    newPositions.push(positions[i]);
-                    cubeCount++;
-                    // this.unitCubeGroup.children[i].material = materialEmpty;
-                    // this.unitCubeGroup.children[i].castShadow = false;
+                    if (!collisions[i]) {
+                        newPositions.push(positions[i]);
+                        cubeCount++;
+                        // this.unitCubeGroup.children[i].material = materialEmpty;
+                        // this.unitCubeGroup.children[i].castShadow = false;
+                    }
                 }
+
+                this.instancedMesh = new THREE.InstancedMesh(unitCubeGeometry, materialCube, cubeCount);
+
+                let matrixTranslation = new THREE.Matrix4();
+                let identityQuaternion = new THREE.Quaternion();
+                identityQuaternion = identityQuaternion.identity();
+
+                for (let i = 0; i < cubeCount; i++) {
+                    matrixTranslation.compose(newPositions[i], identityQuaternion, new THREE.Vector3(1, 1, 1));
+                    this.instancedMesh.setMatrixAt(i + 1, matrixTranslation);
+                }
+
+                this.instancedMesh.instanceMatrix.needsUpdate = true;
+                this.instancedMesh.castShadow = true;
+
+                scene.add(this.instancedMesh);
+
+                renderer.render(scene, camera);
+
+                console.log("generateCubeConstraint finished");
             }
-
-            this.instancedMesh = new THREE.InstancedMesh(unitCubeGeometry, materialCube, cubeCount);
-
-            let matrixTranslation = new THREE.Matrix4();
-            let identityQuaternion = new THREE.Quaternion();
-            identityQuaternion = identityQuaternion.identity();
-
-            for (let i = 0; i < cubeCount; i++) {
-                matrixTranslation.compose(newPositions[i], identityQuaternion, new THREE.Vector3(1, 1, 1));
-                this.instancedMesh.setMatrixAt(i + 1, matrixTranslation);
-            }
-
-            this.instancedMesh.instanceMatrix.needsUpdate = true;
-            this.instancedMesh.castShadow = true;
-
-            scene.add(this.instancedMesh);
-
-            renderer.render(scene, camera);
-
-            console.log("generateCubeConstraint finished");
         }
 
         // for (let k = 0; k < unitCubeNumber; k++) {
@@ -318,5 +319,6 @@ export class NumberConstruct {
 
     removePreviousCubes(scene) {
         scene.remove(this.instancedMesh);
+        this.generatingCubeAllowed = false;
     }
 }
