@@ -61,9 +61,9 @@ document.body.appendChild(stats.domElement);
 
 // State Control
 const states = ['None', 'Room 1', '1 to 2', 'Room 2', '2 to 3', 'Room 3', '3 to 4', 'Room 4'];
-const roomPositions = [new THREE.Vector3(-20, 8, -58.6), new THREE.Vector3(-20, 10.5, -130)];
+const roomPositions = [new THREE.Vector3(-20, 8, -58.6), new THREE.Vector3(-20, 10.5, -130), new THREE.Vector3(-130, 10.5, -130)];
 const ceilingLightPositions = [new THREE.Vector3(-40, 35, -40), new THREE.Vector3(-40, 35, -110), new THREE.Vector3(-110, 35, -110), new THREE.Vector3(-110, 35, -40)];
-const spotlightPositions = [new THREE.Vector3(-20, 23.2, -40), new THREE.Vector3(-20, 0, -65)];
+const spotlightPositions = [new THREE.Vector3(-20, 23.2, -40), new THREE.Vector3(-20, 0, -75), new THREE.Vector3(-75, 0, -130), new THREE.Vector3(-130, 0, -75)];
 
 const zFramePositions = [new THREE.Vector3(-1, 8, -50), new THREE.Vector3(-1, 8, -40), new THREE.Vector3(-1, 8, -30), new THREE.Vector3(-1, 8, -20),
 new THREE.Vector3(-1, 8, -10), new THREE.Vector3(-39.219, 8, -10), new THREE.Vector3(-39.221, 8, -20), new THREE.Vector3(-39.223, 8, -30),
@@ -83,6 +83,7 @@ const iconScalar = 0.0002;
 let iconAnimCounter = 0;
 const targetIconAnimScale = new THREE.Vector3(0.4 * iconScalar, -0.4 * iconScalar, 0.4 * iconScalar);
 let svgAdded = false;
+let middleWheelIconAdded = false;
 
 let onClickPhase1 = true;
 let onClickPhase2 = false;
@@ -90,7 +91,12 @@ let onClickPhase3 = false;
 let UIMenuExpanded = [false, false];
 
 let wheelMovementEnabled = false;
-let desiredCamPositions = [new THREE.Vector3(roomPositions[0].x, roomPositions[0].y, roomPositions[0].z + cameraOffset + 10),
+let currentCamPosIndex = 0;
+let goingBackEnabled = false;
+let ceilingLightsOnEnabled = false;
+let ceilingLightsOffEnabled = false;
+
+let desiredCamPositions1To2 = [new THREE.Vector3(roomPositions[0].x, roomPositions[0].y, roomPositions[0].z + cameraOffset + 10),
 new THREE.Vector3(-24, 8, -26),
 new THREE.Vector3(-24, 8, -33),
 new THREE.Vector3(-28, 8, -40),
@@ -101,7 +107,7 @@ new THREE.Vector3(-28, 9.5, -80),
 new THREE.Vector3(-24, 10, -90),
 new THREE.Vector3(-20, 10.5, -100)];
 
-let desiredCamOrientations = [new THREE.Euler(0, 0, 0, 'XYZ'),
+let desiredCamOrientations1To2 = [new THREE.Euler(0, 0, 0, 'XYZ'),
 new THREE.Euler(0, degreesToRadians(15), 0, 'XYZ'),
 new THREE.Euler(0, degreesToRadians(30), 0, 'XYZ'),
 new THREE.Euler(0, degreesToRadians(25), 0, 'XYZ'),
@@ -111,9 +117,28 @@ new THREE.Euler(0, degreesToRadians(0), 0, 'XYZ'),
 new THREE.Euler(0, degreesToRadians(-10), 0, 'XYZ'),
 new THREE.Euler(0, degreesToRadians(-10), 0, 'XYZ'),
 new THREE.Euler(0, degreesToRadians(0), 0, 'XYZ')];
-let currentCamPosIndex = 0;
 
-let goingBackEnabled = false;
+let desiredCamPositions2To3 = [new THREE.Vector3(roomPositions[1].x - 30, roomPositions[1].y, roomPositions[1].z + 10),
+new THREE.Vector3(-50, 10.5, -130),
+new THREE.Vector3(-50, 10.5, -130),
+new THREE.Vector3(-55, 10.5, -135),
+new THREE.Vector3(-60, 10.5, -140),
+new THREE.Vector3(-65, 10.5, -145),
+new THREE.Vector3(-70, 10.5, -140),
+new THREE.Vector3(-80, 10.5, -135),
+new THREE.Vector3(-90, 10.5, -130),
+new THREE.Vector3(-100, 10.5, -130)];
+
+let desiredCamOrientations2To3 = [new THREE.Euler(0, degreesToRadians(-45), 0, 'XYZ'),
+new THREE.Euler(0, degreesToRadians(-95), 0, 'XYZ'),
+new THREE.Euler(0, degreesToRadians(-145), 0, 'XYZ'),
+new THREE.Euler(0, degreesToRadians(-180), 0, 'XYZ'),
+new THREE.Euler(0, degreesToRadians(160), 0, 'XYZ'),
+new THREE.Euler(0, degreesToRadians(140), 0, 'XYZ'),
+new THREE.Euler(0, degreesToRadians(120), 0, 'XYZ'),
+new THREE.Euler(0, degreesToRadians(100), 0, 'XYZ'),
+new THREE.Euler(0, degreesToRadians(90), 0, 'XYZ'),
+new THREE.Euler(0, degreesToRadians(90), 0, 'XYZ')];
 
 // Canvas
 const canvas = document.querySelector('canvas.webgl');
@@ -192,6 +217,10 @@ const materialNumber = new THREE.MeshBasicMaterial({ color: 0xCCCCCC });
 materialNumber.transparent = true;
 materialNumber.opacity = 1.0;
 
+const materialUI = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+materialUI.transparent = true;
+materialUI.opacity = 1.0;
+
 const materialCube = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
 materialCube.transparent = true;
 materialCube.opacity = 0.4;
@@ -250,17 +279,18 @@ let largeFrame;
 let fontAvenirBook;
 
 /**
- * Lights
+ * Lights & Shadows
  */
 const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.7);
 scene.add(ambientLight);
 
+let shadowMapSizeScalar = 1;
+
 const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 5.0);
 directionalLight.castShadow = true;
-directionalLight.shadow.mapSize.width = 2048;
-directionalLight.shadow.mapSize.height = 2048;
+directionalLight.shadow.mapSize.width = 2048 * shadowMapSizeScalar;
+directionalLight.shadow.mapSize.height = 2048 * shadowMapSizeScalar;
 directionalLight.shadow.camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.5, 100);
-
 directionalLight.shadow.normalBias = 0.1;
 directionalLight.shadow.bias = 0.0001;
 
@@ -292,8 +322,8 @@ function directionalLightHelperCallback() {
 const ceilingLight0 = new THREE.PointLight(0xFFFFFF, 40, 150);
 ceilingLight0.position.set(ceilingLightPositions[0].x, ceilingLightPositions[0].y - 1.5, ceilingLightPositions[0].z);
 ceilingLight0.castShadow = true;
-ceilingLight0.shadow.mapSize.width = 2048;
-ceilingLight0.shadow.mapSize.height = 2048;
+ceilingLight0.shadow.mapSize.width = 2048 * shadowMapSizeScalar;
+ceilingLight0.shadow.mapSize.height = 2048 * shadowMapSizeScalar;
 ceilingLight0.shadow.normalBias = 0.1;
 ceilingLight0.shadow.bias = 0.0001;
 scene.add(ceilingLight0);
@@ -301,8 +331,8 @@ scene.add(ceilingLight0);
 const ceilingLight1 = new THREE.PointLight(0xFFFFFF, 40, 150);
 ceilingLight1.position.set(ceilingLightPositions[1].x, ceilingLightPositions[1].y - 1.5, ceilingLightPositions[1].z);
 ceilingLight1.castShadow = true;
-ceilingLight1.shadow.mapSize.width = 2048;
-ceilingLight1.shadow.mapSize.height = 2048;
+ceilingLight1.shadow.mapSize.width = 2048 * shadowMapSizeScalar;
+ceilingLight1.shadow.mapSize.height = 2048 * shadowMapSizeScalar;
 ceilingLight1.shadow.normalBias = 0.1;
 ceilingLight1.shadow.bias = 0.0001;
 scene.add(ceilingLight1);
@@ -310,8 +340,8 @@ scene.add(ceilingLight1);
 const ceilingLight2 = new THREE.PointLight(0xFFFFFF, 40, 150);
 ceilingLight2.position.set(ceilingLightPositions[2].x, ceilingLightPositions[2].y - 1.5, ceilingLightPositions[2].z);
 ceilingLight2.castShadow = true;
-ceilingLight2.shadow.mapSize.width = 2048;
-ceilingLight2.shadow.mapSize.height = 2048;
+ceilingLight2.shadow.mapSize.width = 2048 * shadowMapSizeScalar;
+ceilingLight2.shadow.mapSize.height = 2048 * shadowMapSizeScalar;
 ceilingLight2.shadow.normalBias = 0.1;
 ceilingLight2.shadow.bias = 0.0001;
 scene.add(ceilingLight2);
@@ -319,8 +349,8 @@ scene.add(ceilingLight2);
 const ceilingLight3 = new THREE.PointLight(0xFFFFFF, 40, 150);
 ceilingLight3.position.set(ceilingLightPositions[3].x, ceilingLightPositions[3].y - 1.5, ceilingLightPositions[3].z);
 ceilingLight3.castShadow = true;
-ceilingLight3.shadow.mapSize.width = 2048;
-ceilingLight3.shadow.mapSize.height = 2048;
+ceilingLight3.shadow.mapSize.width = 2048 * shadowMapSizeScalar;
+ceilingLight3.shadow.mapSize.height = 2048 * shadowMapSizeScalar;
 ceilingLight3.shadow.normalBias = 0.1;
 ceilingLight3.shadow.bias = 0.0001;
 scene.add(ceilingLight3);
@@ -328,36 +358,53 @@ scene.add(ceilingLight3);
 const spotLight0 = new THREE.SpotLight(0xFFFFFF, 40, 100, Math.PI / 8, 0.2);
 spotLight0.position.set(spotlightPositions[0].x, spotlightPositions[0].y, spotlightPositions[0].z);
 spotLight0.castShadow = true;
-spotLight0.shadow.mapSize.width = 2048;
-spotLight0.shadow.mapSize.height = 2048;
+spotLight0.shadow.mapSize.width = 2048 * shadowMapSizeScalar;
+spotLight0.shadow.mapSize.height = 2048 * shadowMapSizeScalar;
 spotLight0.shadow.normalBias = 0.15;
 spotLight0.shadow.bias = 0.0001;
 
 const spotLightEffect = new THREE.PointLight(0xFFFFFF, 10, 5);
 spotLightEffect.position.set(spotlightPositions[0].x, spotlightPositions[0].y, spotlightPositions[0].z);
 spotLightEffect.castShadow = true;
-spotLightEffect.shadow.mapSize.width = 512;
-spotLightEffect.shadow.mapSize.height = 512;
+spotLightEffect.shadow.mapSize.width = 512 * shadowMapSizeScalar;
+spotLightEffect.shadow.mapSize.height = 512 * shadowMapSizeScalar;
 spotLightEffect.shadow.normalBias = 0.1;
 spotLightEffect.shadow.bias = 0.0001;
-scene.add(spotLightEffect);
 
-const spotLight1 = new THREE.SpotLight(0xFFFFFF, 400, 100, Math.PI / 19, 0.5, 0.1);
-spotLight1.position.set(spotlightPositions[1].x, roomPositions[1].y, spotlightPositions[1].z - 2);
-spotLight1.castShadow = true;
-spotLight1.shadow.mapSize.width = 2048;
-spotLight1.shadow.mapSize.height = 2048;
-spotLight1.shadow.normalBias = 0.2;
-spotLight1.shadow.bias = 0.0001;
+const groundSpotLight1 = new THREE.SpotLight(0xFFFFFF, 200, 100, Math.PI / 17, 0.5, 0.1);
+groundSpotLight1.position.set(spotlightPositions[1].x, roomPositions[1].y, spotlightPositions[1].z - 2);
+groundSpotLight1.castShadow = true;
+groundSpotLight1.shadow.mapSize.width = 2048 * shadowMapSizeScalar;
+groundSpotLight1.shadow.mapSize.height = 2048 * shadowMapSizeScalar;
+groundSpotLight1.shadow.normalBias = 0.2;
+groundSpotLight1.shadow.bias = 0.0001;
 //spotLight1.shadow.camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-spotLight1.shadow.camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.5, 100);
+groundSpotLight1.shadow.camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.5, 100);
 
 const groundLightEffect = new THREE.PointLight(0xFFFFFF, 20, 5);
 groundLightEffect.position.set(spotlightPositions[1].x, roomPositions[1].y - 1, spotlightPositions[1].z - 2);
-scene.add(groundLightEffect);
+
+let groundLight1;
+let groundLight2;
+
+const spotlightTargetObject = new THREE.Object3D();
 
 // testingMesh.position.set(spotlightPositions[1].x, roomPositions[1].y - 1, spotlightPositions[1].z - 2)
 // scene.add(testingMesh);
+
+// function updateShadowMapSize(scalar) {
+//     scene.remove(ceilingLight0);
+//     ceilingLight0.shadow.mapSize.width = 2048 * scalar;
+//     ceilingLight0.shadow.mapSize.height = 2048 * scalar;
+//     ceilingLight0.castShadow = true;
+//     //scene.add(ceilingLight0);
+//     ceilingLight1.shadow.mapSize.width = 2048 * scalar;
+//     ceilingLight1.shadow.mapSize.height = 2048 * scalar;
+//     ceilingLight2.shadow.mapSize.width = 2048 * scalar;
+//     ceilingLight2.shadow.mapSize.height = 2048 * scalar;
+//     ceilingLight3.shadow.mapSize.width = 2048 * scalar;
+//     ceilingLight3.shadow.mapSize.height = 2048 * scalar;
+// }
 
 /**
  * Sizes
@@ -398,6 +445,7 @@ orbitControls.panSpeed = 0.5;
 orbitControls.zoomSpeed = 1;
 //orbitControls.target = new THREE.Vector3(roomPositions[0].x + room1TargetOffset, roomPositions[0].y, roomPositions[0].z);
 //orbitControls.update();
+orbitControls.addEventListener('change', requestRenderIfNotRequested);
 orbitControls.enabled = false;
 
 // initial value
@@ -516,12 +564,14 @@ async function init() {
         spotlight.position.set(spotlightPositions[0].x, spotlightPositions[0].y, spotlightPositions[0].z);
         scene.add(spotlight);
 
-        const groundLight = models[3];
-        groundLight.scene.scale.set(1, 1, 1);
-        groundLight.scene.position.set(spotlightPositions[1].x, spotlightPositions[1].y, spotlightPositions[1].z);
-        groundLight.scene.setRotationFromEuler(new THREE.Euler(0, degreesToRadians(180), 0, 'XYZ'));
-        groundLight.scene.material = materialSpotlight;
-        scene.add(groundLight.scene);
+        groundLight1 = models[3].scene.clone();
+        groundLight1.scale.set(1, 1, 1);
+        groundLight1.position.set(spotlightPositions[1].x, spotlightPositions[1].y, spotlightPositions[1].z);
+        groundLight1.setRotationFromEuler(new THREE.Euler(0, degreesToRadians(180), 0, 'XYZ'));
+        groundLight1.material = materialSpotlight;
+        scene.add(groundLight1);
+
+        groundLight2 = models[3].scene.clone();
 
         largeFrame = new THREE.Mesh(largeFrameGeometry, materialFrame);
         largeFrame.position.set(roomPositions[0].x, roomPositions[0].y, roomPositions[0].z - 0.02);
@@ -618,7 +668,7 @@ async function numberMeshCallback() {
 }
 
 /**
- * Interactions & State Control
+ * Interactions & State Control (Model)
  */
 
 function enterNewState() {
@@ -633,10 +683,11 @@ function enterNewState() {
             mainNumber.removePreviousCubes(scene);
             scene.remove(mainNumberClone);
 
-            let matrixScaling = new THREE.Matrix4();
-            matrixScaling.makeScale(1, 1, 1 / mainNumber.numberDepthScalingFactor);
-            mainNumber.currentMesh.geometry.applyMatrix4(matrixScaling);
-            mainNumber.updateNumberMeshPos(scene, new THREE.Vector3(roomPositions[0].x, roomPositions[0].y, roomPositions[0].z));
+            // let matrixScaling = new THREE.Matrix4();
+            // matrixScaling.makeScale(1, 1, 1 / mainNumber.numberDepthScalingFactor);
+            // mainNumber.currentMesh.geometry.applyMatrix4(matrixScaling);
+
+            mainNumber.updateNumberMeshPos(scene, new THREE.Vector3(roomPositions[0].x, roomPositions[0].y, roomPositions[0].z), true);
             mainNumber.currentMesh.material.side = THREE.FrontSide;
 
             scene.add(spotLightEffect);
@@ -659,13 +710,17 @@ function enterNewState() {
     }
     else if (currentState === states[2]) { // 1 to 2
 
+        scene.remove(leftClickIcon);
+        scene.remove(rightClickIcon);
+        scene.remove(middleWheelIcon);
+        middleWheelIconAdded = false;
+
         mainNumberClone = mainNumber.currentMesh.clone();
         scene.add(mainNumberClone);
-        scene.remove(spotLightEffect);
 
         mainNumber.updateNumberMeshPos(scene, new THREE.Vector3(roomPositions[1].x, roomPositions[1].y, roomPositions[1].z));
         mainNumber.generateCubeConstraint(renderer, scene, camera, 128, materialCube);
-        Promise.all([asyncTimeout(1000)]).then(results => {
+        Promise.all([asyncTimeout(500)]).then(results => {
             cameraAnimationDispatcher(camera.position, new THREE.Vector3(roomPositions[0].x, roomPositions[0].y, roomPositions[0].z + (cameraOffset + 10)), camera.quaternion, new THREE.Euler(0, 0, 0, 'XYZ'), 2);
         });
     }
@@ -683,24 +738,99 @@ function enterNewState() {
             new THREE.Euler(0, 0, 0, 'XYZ'), 1);
 
         // Update Lighting
-        const targetObject = new THREE.Object3D();
-        targetObject.position.set(mainNumber.getNumberMeshPos().x, mainNumber.getNumberMeshPos().y, mainNumber.getNumberMeshPos().z);
-        scene.add(targetObject);
-        directionalLight.target = targetObject;
-        directionalLight.position.set(
-            mainNumber.getNumberMeshPos().x,
-            mainNumber.getNumberMeshPos().y,
-            mainNumber.getNumberMeshPos().z + mainNumber.getCubeSideLength() / 2 + cameraOffset);
+        spotlightTargetObject.position.set(mainNumber.getNumberMeshPos().x, mainNumber.getNumberMeshPos().y, mainNumber.getNumberMeshPos().z);
+        scene.add(spotlightTargetObject);
 
-        spotLight1.target = targetObject;
-        scene.add(spotLight1);
-        scene.remove(spotLight0);
+        // directionalLight.target = targetObject;
+        // directionalLight.position.set(
+        //     mainNumber.getNumberMeshPos().x,
+        //     mainNumber.getNumberMeshPos().y,
+        //     mainNumber.getNumberMeshPos().z + mainNumber.getCubeSideLength() / 2 + cameraOffset);
+
+        groundSpotLight1.target = spotlightTargetObject;
+        scene.add(groundSpotLight1);
+        scene.add(groundLightEffect);
+        mainNumber.instancedMesh.castShadow = true;
 
         orbitControls.saveState();
         savedCamPos.set(targetCamPosition.x, targetCamPosition.y, targetCamPosition.z);
+        console.log("Camera control state saved");
 
+        // // Open All Lights
+        // scene.add(spotLight0);
+        // ceilingLight0.intensity = 40;
+        // ceilingLight0.color = new THREE.Color(0xFFFFFF);
+        // ceilingLight1.intensity = 40;
+        // ceilingLight1.color = new THREE.Color(0xFFFFFF);
+        // ceilingLight2.intensity = 40;
+        // ceilingLight2.color = new THREE.Color(0xFFFFFF);
+        // ceilingLight3.intensity = 40;
+        // ceilingLight3.color = new THREE.Color(0xFFFFFF);
+        // ceilingLight0.castShadow = true;
+        // ceilingLight1.castShadow = true;
+        // ceilingLight2.castShadow = true;
+        // ceilingLight3.castShadow = true;
+    }
+    else if (currentState === states[4]) { // 2 to 3
+
+        ceilingLightsOffEnabled = false;
+        ceilingLightsOnEnabled = false;
+
+        cameraAnimationDispatcher(
+            camera.position,
+            new THREE.Vector3(
+                desiredCamPositions2To3[0].x,
+                desiredCamPositions2To3[0].y,
+                desiredCamPositions2To3[0].z),
+            camera.quaternion,
+            desiredCamOrientations2To3[0], 1.5);
+    }
+    else if (currentState === states[5]) { // room 3
+        orbitControls.target = mainNumber.getNumberMeshPos();
+
+        cameraAnimationDispatcher(
+            camera.position,
+            new THREE.Vector3(
+                mainNumber.getNumberMeshPos().x + mainNumber.getCubeSideLength() / 2 + cameraOffset,
+                mainNumber.getNumberMeshPos().y,
+                mainNumber.getNumberMeshPos().z),
+            camera.quaternion,
+            new THREE.Euler(0, degreesToRadians(90), 0, 'XYZ'), 1);
+
+        spotlightTargetObject.position.set(mainNumber.getNumberMeshPos().x, mainNumber.getNumberMeshPos().y, mainNumber.getNumberMeshPos().z);
+        groundSpotLight1.target = spotlightTargetObject;
+
+        // let matrixTranslation = new THREE.Matrix4();
+        // let previousMatrix = new THREE.Matrix4();
+        // for (let i = 0; i < mainNumber.instancedMesh.count; i++) {
+        //     matrixTranslation.makeTranslation(-roomPositions[1].x, -roomPositions[1].y, -roomPositions[1].z);
+        //     mainNumber.instancedMesh.getMatrixAt(i + 1, previousMatrix);
+        //     mainNumber.instancedMesh.setMatrixAt(i + 1, matrixTranslation.multiply(previousMatrix));
+        // }
+
+        mainNumber.instancedMesh.position.set(roomPositions[2].x, roomPositions[2].y, roomPositions[2].z);
+        mainNumber.instancedMesh.setRotationFromEuler(new THREE.Euler(0, degreesToRadians(90), 0, 'XYZ'));
+        mainNumber.instancedMesh.castShadow = true;
+        scene.add(mainNumber.instancedMesh);
+
+        let v = new THREE.Vector3();
+        mainNumber.instancedMesh.getWorldPosition(v);
+        console.log(v);
+
+        scene.remove(groundLight1);
+        groundSpotLight1.position.set(spotlightPositions[2].x - 2, roomPositions[2].y, spotlightPositions[2].z);
+        groundLightEffect.position.set(spotlightPositions[2].x - 2, roomPositions[2].y - 1, spotlightPositions[2].z);
+        groundLight1.position.set(spotlightPositions[2].x, spotlightPositions[2].y, spotlightPositions[2].z);
+        groundLight1.setRotationFromEuler(new THREE.Euler(0, degreesToRadians(-90), 0, 'XYZ'));
+        scene.add(groundSpotLight1);
+        scene.add(groundLightEffect);
+        scene.add(groundLight1);
+
+        orbitControls.saveState();
+        savedCamPos.set(targetCamPosition.x, targetCamPosition.y, targetCamPosition.z);
         console.log("Camera control state saved");
     }
+
     // requestRenderIfNotRequested("enterNewState");
 }
 
@@ -716,7 +846,7 @@ const mouse = new THREE.Vector2();
 const cameraRayCaster = new THREE.Raycaster();
 
 /**
- * Animate
+ * Animation Loop (View)
  */
 
 const clock = new THREE.Clock();
@@ -732,8 +862,6 @@ const tick = () => {
 
         if (orbitControls.enabled) updateUIIconGroup();
 
-        if (!cameraAnimation && !wheelMovementEnabled && initialCameraAnimationDone) orbitControls.update();
-
         // if (!svgAdded && initialCameraAnimationDone) {
         //     scene.add(leftClickIcon);
         //     scene.add(middleWheelIcon);
@@ -742,15 +870,29 @@ const tick = () => {
         //     svgAdded = true;
         // }
 
-        if (!orbitControls.enabled && !cameraAnimation && iconAnimationDone && !wheelMovementEnabled) {
-            console.log('orbitControls enabled');
-            orbitControls.enabled = true;
-            orbitControls.addEventListener('change', requestRenderIfNotRequested);
-        }
-
         if (previousState !== currentState) {
             enterNewState();
             previousState = currentState;
+        }
+
+        if (currentState === states[1] || currentState === states[3] || currentState === states[5] || currentState === states[7]) {
+            if (!cameraAnimation && iconAnimationDone && !wheelMovementEnabled) {
+                if (!orbitControls.enabled) {
+                    console.log('orbitControls enabled');
+                    orbitControls.enabled = true;
+                    orbitControls.update();
+                }
+                else {
+                    orbitControls.update();
+                }
+            }
+        }
+        else if (currentState === states[2]) {
+            if (!middleWheelIconAdded && mainNumber.generatingCubeDone) {
+                scene.add(middleWheelIcon);
+                middleWheelIconAdded = true;
+                requestRenderIfNotRequested('Middle Wheel Icon Added');
+            }
         }
 
         // Update the picking ray with the camera and mouse position
@@ -817,6 +959,7 @@ const tick = () => {
 
     // Camera animation
     if (cameraAnimation) {
+
         if (!initialCameraAnimationDone) {
             camera.position.lerp(targetCamPosition, 0.015);
             camera.quaternion.slerp(targetCamOrientation, 0.015);
@@ -836,7 +979,6 @@ const tick = () => {
             ceilingLight1.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
             ceilingLight2.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
             ceilingLight3.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
-
         }
         // room 2 to 1
         else if (currentState === states[1]) {
@@ -845,6 +987,21 @@ const tick = () => {
                 ceilingLight1.color.lerpColors(new THREE.Color(0x000000), new THREE.Color(0xFFFFFF), cameraAnimationTime / cameraAnimationDuration);
                 ceilingLight2.color.lerpColors(new THREE.Color(0x000000), new THREE.Color(0xFFFFFF), cameraAnimationTime / cameraAnimationDuration);
                 ceilingLight3.color.lerpColors(new THREE.Color(0x000000), new THREE.Color(0xFFFFFF), cameraAnimationTime / cameraAnimationDuration);
+            }
+        }
+        // room 2 to 3
+        else if (currentState === states[4]) {
+            if (ceilingLightsOnEnabled) {
+                ceilingLight0.color.lerpColors(new THREE.Color(0x000000), new THREE.Color(0xFFFFFF), cameraAnimationTime / cameraAnimationDuration);
+                ceilingLight1.color.lerpColors(new THREE.Color(0x000000), new THREE.Color(0xFFFFFF), cameraAnimationTime / cameraAnimationDuration);
+                ceilingLight2.color.lerpColors(new THREE.Color(0x000000), new THREE.Color(0xFFFFFF), cameraAnimationTime / cameraAnimationDuration);
+                ceilingLight3.color.lerpColors(new THREE.Color(0x000000), new THREE.Color(0xFFFFFF), cameraAnimationTime / cameraAnimationDuration);
+            }
+            else if (ceilingLightsOffEnabled) {
+                ceilingLight0.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
+                ceilingLight1.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
+                ceilingLight2.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
+                ceilingLight3.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
             }
         }
 
@@ -874,6 +1031,7 @@ const tick = () => {
             clock.stop();
 
             if (currentState === states[2]) {
+
                 ceilingLight0.intensity = 0;
                 ceilingLight1.intensity = 0;
                 ceilingLight2.intensity = 0;
@@ -884,10 +1042,8 @@ const tick = () => {
                 ceilingLight3.castShadow = false;
 
                 wheelMovementEnabled = true;
-                scene.remove(leftClickIcon);
-                scene.remove(rightClickIcon);
 
-                if (currentCamPosIndex === desiredCamPositions.length - 1) {
+                if (currentCamPosIndex === desiredCamPositions1To2.length - 1) {
                     cameraAnimation = true;
                     currentState = states[3];
                     wheelMovementEnabled = false;
@@ -911,13 +1067,97 @@ const tick = () => {
                 if (goingBackEnabled) {
                     scene.add(leftClickIcon);
                     scene.add(rightClickIcon);
+                    scene.add(middleWheelIcon);
 
                     goingBackEnabled = false;
                 }
             }
             else if (currentState === states[3]) {
+
                 scene.add(leftClickIcon);
                 scene.add(rightClickIcon);
+                scene.add(middleWheelIcon);
+
+                nextButton.position.set(roomPositions[1].x - 10, roomPositions[1].y, roomPositions[1].z - 19);
+                tickMesh.position.set(roomPositions[1].x - 10, roomPositions[1].y, roomPositions[1].z - 19);
+                scene.add(nextButton);
+                scene.add(tickMesh);
+
+                activeButtons.push(nextButton);
+
+                if (goingBackEnabled) {
+                    goingBackEnabled = false;
+                }
+            }
+            else if (currentState === states[4]) {
+                console.log(ceilingLightsOnEnabled);
+                console.log(ceilingLightsOffEnabled);
+
+                scene.remove(leftClickIcon);
+                scene.remove(rightClickIcon);
+                wheelMovementEnabled = true;
+
+                if (currentCamPosIndex === desiredCamPositions2To3.length - 1) {
+                    cameraAnimation = true;
+                    currentState = states[5];
+                    wheelMovementEnabled = false;
+                }
+                else if (currentCamPosIndex === 0 && goingBackEnabled) {
+                    cameraAnimation = true;
+                    currentState = states[3];
+                    wheelMovementEnabled = false;
+                }
+                else if (currentCamPosIndex === 2) {
+                    if (ceilingLightsOffEnabled) {
+                        ceilingLight0.intensity = 0;
+                        ceilingLight1.intensity = 0;
+                        ceilingLight2.intensity = 0;
+                        ceilingLight3.intensity = 0;
+                        ceilingLight0.castShadow = false;
+                        ceilingLight1.castShadow = false;
+                        ceilingLight2.castShadow = false;
+                        ceilingLight3.castShadow = false;
+
+                        ceilingLightsOffEnabled = false;
+                    }
+                }
+                else if (currentCamPosIndex === 3) {
+                    ceilingLightsOnEnabled = false;
+                }
+                else if (currentCamPosIndex === desiredCamPositions2To3.length - 2) {
+                    if (ceilingLightsOffEnabled) {
+                        ceilingLight0.intensity = 0;
+                        ceilingLight1.intensity = 0;
+                        ceilingLight2.intensity = 0;
+                        ceilingLight3.intensity = 0;
+                        ceilingLight0.castShadow = false;
+                        ceilingLight1.castShadow = false;
+                        ceilingLight2.castShadow = false;
+                        ceilingLight3.castShadow = false;
+
+                        ceilingLightsOffEnabled = false;
+                    }
+                }
+                else if (currentCamPosIndex === desiredCamPositions2To3.length - 3) {
+                    ceilingLightsOnEnabled = false;
+                }
+            }
+            else if (currentState === states[5]) {
+
+                scene.add(leftClickIcon);
+                scene.add(rightClickIcon);
+                scene.add(middleWheelIcon);
+
+                nextButton.position.set(roomPositions[2].x + 10, roomPositions[2].y, roomPositions[2].z - 19);
+                tickMesh.position.set(roomPositions[2].x + 10, roomPositions[2].y, roomPositions[2].z - 19);
+                scene.add(nextButton);
+                scene.add(tickMesh);
+
+                activeButtons.push(nextButton);
+
+                if (goingBackEnabled) {
+                    goingBackEnabled = false;
+                }
             }
         }
 
@@ -930,7 +1170,6 @@ const tick = () => {
         orbitControls.enabled = false;
 
         //targetLeftClickIconPos = new THREE.Vector3(sizes.width / 2 * iconScalar, sizes.height / 2 * iconScalar, 0);
-        console.log('Icon Animation');
         leftClickIcon.scale.lerp(targetIconAnimScale, 0.02);
         //leftClickIcon.position.lerp(targetLeftClickIconPos, 0.01);
         for (let i = 0; i < leftClickIcon.children.length; i++) {
@@ -1009,7 +1248,7 @@ function requestRenderIfNotRequested(caller) {
 
     // if (caller != 'cameraAnimation') {
     // console.log("Rendering requested by ");
-    // console.log(caller);
+    //console.log(caller);
     // }
 
     if (!renderRequested) {
@@ -1022,8 +1261,9 @@ init();
 
 tick();
 
+
 /**
- * Event Handlers
+ * Event Handlers (Controller)
  */
 
 function onMouseMove(event) {
@@ -1045,8 +1285,10 @@ function onClick(event) {
     else if (onClickPhase2) {
         scene.remove(UIInstructionMesh7);
         scene.add(mainNumber.currentMesh);
-        scene.add(spotLight0);
+
         spotLight0.target = largeFrame;
+        scene.add(spotLight0);
+        scene.add(spotLightEffect);
 
         requestRenderIfNotRequested('mainNumber added');
 
@@ -1060,86 +1302,165 @@ function onClick(event) {
         onClickPhase3 = false;
     }
 
-    if (currentState === states[1]) {
-        // if (states.indexOf(currentState) > 1) {
-        //     currentState = states[states.indexOf(currentState) - 1];
-        //     activeButtons.pop();
-        //     activeButtons.pop();
-        //     scene.remove(scene.getObjectByName('previousStepButton'));
-        //     scene.remove(scene.getObjectByName('nextStepButton'));
-        // }
+    // if (states.indexOf(currentState) > 1) {
+    //     currentState = states[states.indexOf(currentState) - 1];
+    //     activeButtons.pop();
+    //     activeButtons.pop();
+    //     scene.remove(scene.getObjectByName('previousStepButton'));
+    //     scene.remove(scene.getObjectByName('nextStepButton'));
+    // }
 
-        if (nextButton.material === materialSelected) {
-
+    if (nextButton.material === materialSelected) {
+        if (currentState === states[1]) {
             if (UIMenuExpanded[0]) collapseUIMenu(0);
             if (UIMenuExpanded[1]) collapseUIMenu(1);
             removeUI();
             currentState = states[2];
         }
-        else if (styleButton.material === materialSelected) {
-            if (!UIMenuExpanded[0]) {
-                if (UIMenuExpanded[1]) collapseUIMenu(1);
-                expandUIMenu(0);
-            }
-            else {
-                collapseUIMenu(0);
-            }
+        else if (currentState === states[3]) {
+            scene.remove(nextButton);
+            scene.remove(tickMesh);
+            activeButtons.length = 0;
+            currentState = states[4];
+
+            wheelMovementEnabled = false;
+            currentCamPosIndex = 0;
+            goingBackEnabled = false;
         }
-        else if (fontButton.material === materialSelected) {
-            if (!UIMenuExpanded[1]) {
-                if (UIMenuExpanded[0]) collapseUIMenu(0);
-                expandUIMenu(1);
-            }
-            else {
-                collapseUIMenu(1);
-            }
+    }
+    else if (styleButton.material === materialSelected) {
+        if (!UIMenuExpanded[0]) {
+            if (UIMenuExpanded[1]) collapseUIMenu(1);
+            expandUIMenu(0);
         }
-        else if (styleButton1.material === materialSelected) {
-            confirmUIMenu(0, 0);
+        else {
+            collapseUIMenu(0);
         }
-        else if (styleButton2.material === materialSelected) {
-            confirmUIMenu(0, 1);
+    }
+    else if (fontButton.material === materialSelected) {
+        if (!UIMenuExpanded[1]) {
+            if (UIMenuExpanded[0]) collapseUIMenu(0);
+            expandUIMenu(1);
         }
-        else if (styleButton3.material === materialSelected) {
-            confirmUIMenu(0, 2);
+        else {
+            collapseUIMenu(1);
         }
-        else if (styleButton4.material === materialSelected) {
-            confirmUIMenu(0, 3);
-        }
-        else if (fontButton1.material === materialSelected) {
-            confirmUIMenu(1, 0);
-        }
-        else if (fontButton2.material === materialSelected) {
-            confirmUIMenu(1, 1);
-        }
-        else if (fontButton3.material === materialSelected) {
-            confirmUIMenu(1, 2);
-        }
-        else if (fontButton4.material === materialSelected) {
-            confirmUIMenu(1, 3);
-        }
-        else if (fontButton5.material === materialSelected) {
-            confirmUIMenu(1, 4);
-        }
-        else if (fontButton6.material === materialSelected) {
-            confirmUIMenu(1, 5);
-        }
+    }
+    else if (styleButton1.material === materialSelected) {
+        confirmUIMenu(0, 0);
+    }
+    else if (styleButton2.material === materialSelected) {
+        confirmUIMenu(0, 1);
+    }
+    else if (styleButton3.material === materialSelected) {
+        confirmUIMenu(0, 2);
+    }
+    else if (styleButton4.material === materialSelected) {
+        confirmUIMenu(0, 3);
+    }
+    else if (fontButton1.material === materialSelected) {
+        confirmUIMenu(1, 0);
+    }
+    else if (fontButton2.material === materialSelected) {
+        confirmUIMenu(1, 1);
+    }
+    else if (fontButton3.material === materialSelected) {
+        confirmUIMenu(1, 2);
+    }
+    else if (fontButton4.material === materialSelected) {
+        confirmUIMenu(1, 3);
+    }
+    else if (fontButton5.material === materialSelected) {
+        confirmUIMenu(1, 4);
+    }
+    else if (fontButton6.material === materialSelected) {
+        confirmUIMenu(1, 5);
     }
 }
 
 function onZoom(event) {
-    if (wheelMovementEnabled) {
-        console.log('Zoom event');
-        if (event.deltaY > 0 && currentCamPosIndex < desiredCamPositions.length - 1) {
-            currentCamPosIndex += 1;
-            cameraAnimationDispatcher(camera.position, desiredCamPositions[currentCamPosIndex], camera.quaternion, desiredCamOrientations[currentCamPosIndex], 1.2);
-            wheelMovementEnabled = false;
-            goingBackEnabled = true;
+    console.log('Zoom event');
+    if (wheelMovementEnabled && mainNumber.generatingCubeDone) {
+        if (currentState === states[2]) {
+            if (event.deltaY < 0 && currentCamPosIndex < desiredCamPositions1To2.length - 1) {
+                currentCamPosIndex += 1;
+                cameraAnimationDispatcher(camera.position, desiredCamPositions1To2[currentCamPosIndex], camera.quaternion, desiredCamOrientations1To2[currentCamPosIndex], 0.2);
+                wheelMovementEnabled = false;
+                goingBackEnabled = true;
+                scene.remove(spotLight0);
+                scene.remove(spotLightEffect);
+            }
+            else if (event.deltaY > 0 && currentCamPosIndex > 0) {
+                currentCamPosIndex -= 1;
+                cameraAnimationDispatcher(camera.position, desiredCamPositions1To2[currentCamPosIndex], camera.quaternion, desiredCamOrientations1To2[currentCamPosIndex], 0.2);
+                wheelMovementEnabled = false;
+            }
         }
-        else if (event.deltaY < 0 && currentCamPosIndex > 0) {
-            currentCamPosIndex -= 1;
-            cameraAnimationDispatcher(camera.position, desiredCamPositions[currentCamPosIndex], camera.quaternion, desiredCamOrientations[currentCamPosIndex], 1.2);
-            wheelMovementEnabled = false;
+        else if (currentState === states[4]) {
+            if (event.deltaY < 0 && currentCamPosIndex < desiredCamPositions2To3.length - 1) {
+                if (currentCamPosIndex === 2) {
+                    ceilingLight0.intensity = 40;
+                    ceilingLight1.intensity = 40;
+                    ceilingLight2.intensity = 40;
+                    ceilingLight3.intensity = 40;
+                    ceilingLight0.castShadow = true;
+                    ceilingLight1.castShadow = true;
+                    ceilingLight2.castShadow = true;
+                    ceilingLight3.castShadow = true;
+
+                    ceilingLightsOnEnabled = true;
+
+                    mainNumber.updateNumberMeshPos(scene, new THREE.Vector3(roomPositions[2].x, roomPositions[2].y, roomPositions[2].z));
+                    scene.remove(mainNumber.instancedMesh);
+                }
+                else if (currentCamPosIndex === desiredCamPositions2To3.length - 3) {
+                    ceilingLightsOffEnabled = true;
+                }
+
+                currentCamPosIndex += 1;
+                if (currentCamPosIndex <= 3) {
+                    cameraAnimationDispatcher(camera.position, desiredCamPositions2To3[currentCamPosIndex], camera.quaternion, desiredCamOrientations2To3[currentCamPosIndex], 2);
+                }
+                else {
+                    cameraAnimationDispatcher(camera.position, desiredCamPositions2To3[currentCamPosIndex], camera.quaternion, desiredCamOrientations2To3[currentCamPosIndex], 1.2);
+                }
+                wheelMovementEnabled = false;
+                goingBackEnabled = true;
+                scene.remove(groundSpotLight1);
+                scene.remove(groundLightEffect);
+
+                mainNumber.instancedMesh.castShadow = false;
+            }
+            else if (event.deltaY > 0 && currentCamPosIndex > 0) {
+                if (currentCamPosIndex === 2) {
+                    mainNumber.updateNumberMeshPos(scene, new THREE.Vector3(roomPositions[1].x, roomPositions[1].y, roomPositions[1].z));
+                    scene.add(mainNumber.instancedMesh);
+                }
+                if (currentCamPosIndex === 3) {
+                    ceilingLightsOffEnabled = true;
+                }
+                else if (currentCamPosIndex === desiredCamPositions2To3.length - 2) {
+                    ceilingLight0.intensity = 40;
+                    ceilingLight1.intensity = 40;
+                    ceilingLight2.intensity = 40;
+                    ceilingLight3.intensity = 40;
+                    ceilingLight0.castShadow = true;
+                    ceilingLight1.castShadow = true;
+                    ceilingLight2.castShadow = true;
+                    ceilingLight3.castShadow = true;
+
+                    ceilingLightsOnEnabled = true;
+                }
+
+                currentCamPosIndex -= 1;
+                if (currentCamPosIndex <= 3) {
+                    cameraAnimationDispatcher(camera.position, desiredCamPositions2To3[currentCamPosIndex], camera.quaternion, desiredCamOrientations2To3[currentCamPosIndex], 2);
+                }
+                else {
+                    cameraAnimationDispatcher(camera.position, desiredCamPositions2To3[currentCamPosIndex], camera.quaternion, desiredCamOrientations2To3[currentCamPosIndex], 1.2);
+                }
+                wheelMovementEnabled = false;
+            }
         }
     }
 }
@@ -1176,7 +1497,7 @@ function initUI() {
                 bevelOffset: 0,
                 bevelSegments: 5
             });
-            UIInstructionMesh1 = new THREE.Mesh(UITitleGeometry1, materialNumber);
+            UIInstructionMesh1 = new THREE.Mesh(UITitleGeometry1, materialUI);
             UIInstructionMesh1.position.set(mainNumber.getNumberMeshPos().x + 9.8, mainNumber.getNumberMeshPos().y + 2.2, mainNumber.getNumberMeshPos().z + 0.1);
             //scene.add(UIInstructionMesh1);
 
@@ -1191,7 +1512,7 @@ function initUI() {
                 bevelOffset: 0,
                 bevelSegments: 5
             });
-            UIInstructionMesh2 = new THREE.Mesh(UITitleGeometry2, materialNumber);
+            UIInstructionMesh2 = new THREE.Mesh(UITitleGeometry2, materialUI);
             UIInstructionMesh2.position.set(mainNumber.getNumberMeshPos().x + 9.8, mainNumber.getNumberMeshPos().y + 1.45, mainNumber.getNumberMeshPos().z + 0.1);
             //scene.add(UIInstructionMesh2);
 
@@ -1206,7 +1527,7 @@ function initUI() {
                 bevelOffset: 0,
                 bevelSegments: 5
             });
-            UIInstructionMesh3 = new THREE.Mesh(UITitleGeometry3, materialNumber);
+            UIInstructionMesh3 = new THREE.Mesh(UITitleGeometry3, materialUI);
             UIInstructionMesh3.position.set(mainNumber.getNumberMeshPos().x + 9.8, mainNumber.getNumberMeshPos().y + 0.1, mainNumber.getNumberMeshPos().z + 0.1);
             //scene.add(UIInstructionMesh3);
 
@@ -1222,7 +1543,7 @@ function initUI() {
                 bevelSegments: 5
             });
             UITitleGeometry4.center();
-            UIInstructionMesh4 = new THREE.Mesh(UITitleGeometry4, materialNumber);
+            UIInstructionMesh4 = new THREE.Mesh(UITitleGeometry4, materialUI);
             UIInstructionMesh4.position.set(mainNumber.getNumberMeshPos().x, mainNumber.getNumberMeshPos().y + 0.8, mainNumber.getNumberMeshPos().z);
             scene.add(UIInstructionMesh4);
 
@@ -1238,7 +1559,7 @@ function initUI() {
                 bevelSegments: 5
             });
             UITitleGeometry5.center();
-            UIInstructionMesh5 = new THREE.Mesh(UITitleGeometry5, materialNumber);
+            UIInstructionMesh5 = new THREE.Mesh(UITitleGeometry5, materialUI);
             UIInstructionMesh5.position.set(mainNumber.getNumberMeshPos().x, mainNumber.getNumberMeshPos().y - 0.8, mainNumber.getNumberMeshPos().z);
             scene.add(UIInstructionMesh5);
 
@@ -1254,7 +1575,7 @@ function initUI() {
                 bevelSegments: 5
             });
             UITitleGeometry7.center();
-            UIInstructionMesh7 = new THREE.Mesh(UITitleGeometry7, materialNumber);
+            UIInstructionMesh7 = new THREE.Mesh(UITitleGeometry7, materialUI);
             UIInstructionMesh7.position.set(mainNumber.getNumberMeshPos().x, mainNumber.getNumberMeshPos().y, mainNumber.getNumberMeshPos().z);
 
             tickGeometry = new THREE.TextGeometry('√', {
@@ -1269,7 +1590,7 @@ function initUI() {
                 bevelSegments: 5
             });
             tickGeometry.center();
-            tickMesh = new THREE.Mesh(tickGeometry, materialNumber);
+            tickMesh = new THREE.Mesh(tickGeometry, materialUI);
             tickMesh.position.set(mainNumber.getNumberMeshPos().x + 12, mainNumber.getNumberMeshPos().y - 2, mainNumber.getNumberMeshPos().z);
             //scene.add(tickMesh);
 
@@ -1286,7 +1607,7 @@ function initUI() {
                     bevelOffset: 0,
                     bevelSegments: 5
                 });
-                styleTextMesh = new THREE.Mesh(UIContentGeometry1, materialNumber);
+                styleTextMesh = new THREE.Mesh(UIContentGeometry1, materialUI);
                 styleTextMesh.position.set(mainNumber.getNumberMeshPos().x + 10.3, mainNumber.getNumberMeshPos().y + 0.9, mainNumber.getNumberMeshPos().z + 0.1);
 
                 for (let n = 0; n < styleOptions.length; n++) {
@@ -1302,7 +1623,7 @@ function initUI() {
                         bevelSegments: 5
                     });
 
-                    styleTextMeshes.push(new THREE.Mesh(UIContentGeometry1, materialNumber));
+                    styleTextMeshes.push(new THREE.Mesh(UIContentGeometry1, materialUI));
                     styleTextMeshes[n].position.set(mainNumber.getNumberMeshPos().x + 10.3, mainNumber.getNumberMeshPos().y + 0.9, mainNumber.getNumberMeshPos().z + 0.1);
                 }
 
@@ -1317,7 +1638,7 @@ function initUI() {
                     bevelOffset: 0,
                     bevelSegments: 5
                 });
-                fontTextMesh = new THREE.Mesh(UIContentGeometry2, materialNumber);
+                fontTextMesh = new THREE.Mesh(UIContentGeometry2, materialUI);
                 fontTextMesh.position.set(mainNumber.getNumberMeshPos().x + 10.3, mainNumber.getNumberMeshPos().y - 0.4, mainNumber.getNumberMeshPos().z + 0.1);
 
                 for (let n = 0; n < fontOptions.length; n++) {
@@ -1333,7 +1654,7 @@ function initUI() {
                         bevelSegments: 5
                     });
 
-                    fontTextMeshes.push(new THREE.Mesh(UIContentGeometry2, materialNumber));
+                    fontTextMeshes.push(new THREE.Mesh(UIContentGeometry2, materialUI));
                     fontTextMeshes[n].position.set(mainNumber.getNumberMeshPos().x + 10.3, mainNumber.getNumberMeshPos().y - 0.4, mainNumber.getNumberMeshPos().z + 0.1);
                 }
 
@@ -1350,7 +1671,7 @@ function initUI() {
                     bevelSegments: 5
                 });
                 UITitleGeometry6.center();
-                UIInstructionMesh6 = new THREE.Mesh(UITitleGeometry6, materialNumber);
+                UIInstructionMesh6 = new THREE.Mesh(UITitleGeometry6, materialUI);
                 UIInstructionMesh6.position.set(mainNumber.getNumberMeshPos().x, mainNumber.getNumberMeshPos().y - 3, mainNumber.getNumberMeshPos().z);
                 //scene.add(UIInstructionMesh6);
 
@@ -1368,8 +1689,8 @@ function initUI() {
                 fontButton5 = fontButton.clone();
                 fontButton6 = fontButton.clone();
                 UIBackground = new THREE.Mesh(UIBackgroundGeometry, materialUIBackground);
-                smallTriangle1 = new THREE.Mesh(smallTriangleGeometry, materialNumber);
-                smallTriangle2 = new THREE.Mesh(smallTriangleGeometry, materialNumber);
+                smallTriangle1 = new THREE.Mesh(smallTriangleGeometry, materialUI);
+                smallTriangle2 = new THREE.Mesh(smallTriangleGeometry, materialUI);
 
                 nextButton = new THREE.Mesh(nextButtonGeometry, materialUnselected);
 
@@ -1571,7 +1892,7 @@ function confirmUIMenu(index, buttonIndex) {
         });
 
         scene.remove(styleTextMesh);
-        styleTextMesh = new THREE.Mesh(UIContentGeometry, materialNumber);
+        styleTextMesh = new THREE.Mesh(UIContentGeometry, materialUI);
         styleTextMesh.position.set(mainNumber.getNumberMeshPos().x + 10.3, mainNumber.getNumberMeshPos().y + 0.9, mainNumber.getNumberMeshPos().z + 0.1);
         scene.add(styleTextMesh);
 
@@ -1594,7 +1915,7 @@ function confirmUIMenu(index, buttonIndex) {
         });
 
         scene.remove(fontTextMesh);
-        fontTextMesh = new THREE.Mesh(UIContentGeometry, materialNumber);
+        fontTextMesh = new THREE.Mesh(UIContentGeometry, materialUI);
         fontTextMesh.position.set(mainNumber.getNumberMeshPos().x + 10.3, mainNumber.getNumberMeshPos().y - 0.4, mainNumber.getNumberMeshPos().z + 0.1);
         scene.add(fontTextMesh);
 

@@ -18,19 +18,20 @@ export class NumberConstruct {
         this.standardNumberSize = 2;
         this.numberMeshScale = 1;
         this.boundingBoxSize = new THREE.Vector3(0, 0, 0);
-        this.currentPos = position; // initial position
+        this.currentPos = new THREE.Vector3(position.x, position.y, position.z); // initial position
         //this.unitCubeGroup = new THREE.Group();
         this.instancedMesh;
         this.cubeSideLength = 0;
         this.numberDepthScalingFactor = 0;
         this.generatingCubeAllowed = true;
+        this.generatingCubeDone = false;
         // this.collisionRayCaster0 = new THREE.Raycaster();
         // this.collisionRayCaster1 = new THREE.Raycaster();
         // this.collisionRayCaster2 = new THREE.Raycaster();
         // this.collisionRayCaster3 = new THREE.Raycaster();
     }
 
-    updateNumberMeshPos(scene, newPos) {
+    updateNumberMeshPos(scene, newPos, addNumberMesh = false) {
 
         console.log("updateNumberMeshPos started");
 
@@ -39,13 +40,15 @@ export class NumberConstruct {
 
         this.currentMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
 
-        scene.add(this.currentMesh);
+        if (addNumberMesh) {
+            scene.add(this.currentMesh);
+        }
 
         console.log("updateNumberMeshPos finished");
     }
 
     getNumberMeshPos() {
-        return this.currentPos;
+        return this.currentPos.clone();
     }
 
     getCubeSideLength() {
@@ -94,7 +97,7 @@ export class NumberConstruct {
                 boundingBox.setFromObject(this.currentMesh);
                 boundingBox.getSize(boundingBoxSizeTemp);
 
-                this.numberMeshScale = boundingBoxSizeTemp.x * size / boundingBoxSizeTemp.y <= 14 ? size / boundingBoxSizeTemp.y : 14 / boundingBoxSizeTemp.x;
+                this.numberMeshScale = boundingBoxSizeTemp.x * size / boundingBoxSizeTemp.y <= 12 ? size / boundingBoxSizeTemp.y : 12 / boundingBoxSizeTemp.x;
                 //this.currentMesh.scale.set(this.numberMeshScale, this.numberMeshScale, this.numberMeshScale);
                 let matrixScaling = new THREE.Matrix4();
                 matrixScaling.makeScale(this.numberMeshScale, this.numberMeshScale, 1);
@@ -209,6 +212,7 @@ export class NumberConstruct {
         console.log("generateCubeConstraint started");
 
         this.generatingCubeAllowed = true;
+        this.generatingCubeDone = false;
 
         scene.remove(this.currentMesh);
 
@@ -218,18 +222,17 @@ export class NumberConstruct {
         const unitCubeGeometry = new THREE.BoxGeometry(unitCubeSideLength, unitCubeSideLength, unitCubeSideLength);
         //this.unitCubeGroup.clear();
 
-        let matrixScaling = new THREE.Matrix4();
-        this.numberDepthScalingFactor = (this.cubeSideLength + 1) / this.boundingBoxSize.z;
-        matrixScaling.makeScale(1, 1, this.numberDepthScalingFactor);
-        //this.currentMesh.geometry.applyMatrix4(matrixScaling);
+        // let matrixScaling = new THREE.Matrix4();
+        // this.numberDepthScalingFactor = (this.cubeSideLength + 1) / this.boundingBoxSize.z;
+        // matrixScaling.makeScale(1, 1, this.numberDepthScalingFactor);
+        // this.currentMesh.geometry.applyMatrix4(matrixScaling);
 
-        this.currentMesh.scale.set(1, 1, this.cubeSideLength + 1);
+        //this.currentMesh.scale.set(1, 1, this.cubeSideLength + 1);
 
         let webWorker = new Worker(new URL('./workers/numberConstructWorker.js', import.meta.url));
-        webWorker.postMessage([this.currentPos, unitCubeNumber, unitCubeSideLength, this.cubeSideLength, this.numberText, this.numberFont, this.numberMeshScale, this.numberDepthScalingFactor, this.standardNumberSize, this.cubeSideLength + 1]);
+        webWorker.postMessage([new THREE.Vector3(0, 0, 0), unitCubeNumber, unitCubeSideLength, this.cubeSideLength, this.numberText, this.numberFont, this.numberMeshScale, this.numberDepthScalingFactor, this.standardNumberSize, this.cubeSideLength + 1]);
         webWorker.onmessage = e => {
             if (this.generatingCubeAllowed) {
-
                 console.log("Collision message received");
 
                 let positions = e.data[0];
@@ -252,24 +255,34 @@ export class NumberConstruct {
                 this.instancedMesh = new THREE.InstancedMesh(unitCubeGeometry, materialCube, cubeCount);
 
                 let matrixTranslation = new THREE.Matrix4();
-                let identityQuaternion = new THREE.Quaternion();
-                identityQuaternion = identityQuaternion.identity();
+                // let identityQuaternion = new THREE.Quaternion();
+                // identityQuaternion = identityQuaternion.identity();
 
                 for (let i = 0; i < cubeCount; i++) {
-                    matrixTranslation.compose(newPositions[i], identityQuaternion, new THREE.Vector3(1, 1, 1));
+                    matrixTranslation.makeTranslation(newPositions[i].x, newPositions[i].y, newPositions[i].z);
                     this.instancedMesh.setMatrixAt(i + 1, matrixTranslation);
                 }
 
                 this.instancedMesh.instanceMatrix.needsUpdate = true;
                 this.instancedMesh.castShadow = true;
 
+                this.instancedMesh.position.set(this.currentPos.x, this.currentPos.y, this.currentPos.z);
                 scene.add(this.instancedMesh);
 
-                renderer.render(scene, camera);
+                //renderer.render(scene, camera);
 
+                this.generatingCubeDone = true;
                 console.log("generateCubeConstraint finished");
             }
         }
+    }
+
+    removePreviousCubes(scene) {
+        scene.remove(this.instancedMesh);
+        this.generatingCubeAllowed = false;
+    }
+}
+
 
         // for (let k = 0; k < unitCubeNumber; k++) {
         //     for (let j = 0; j < unitCubeNumber; j++) {
@@ -314,11 +327,3 @@ export class NumberConstruct {
         // scene.add(this.unitCubeGroup);
         // renderer.render(scene, camera);
         // console.log("generateCubeConstraint finished");
-
-    }
-
-    removePreviousCubes(scene) {
-        scene.remove(this.instancedMesh);
-        this.generatingCubeAllowed = false;
-    }
-}
