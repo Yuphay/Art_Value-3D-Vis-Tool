@@ -15,6 +15,7 @@ export class NumberConstruct {
         this.numberValue = numberValue;
         this.numberStyle = numberStyle;
         this.numberFont = numberFont;
+        this.numberFontPath;
         this.standardNumberSize = 2;
         this.numberMeshScale = 1;
         this.boundingBoxSize = new THREE.Vector3(0, 0, 0);
@@ -33,7 +34,7 @@ export class NumberConstruct {
 
     updateNumberMeshPos(scene, newPos, addNumberMesh = false) {
 
-        console.log("updateNumberMeshPos started");
+        // console.log("updateNumberMeshPos started");
 
         scene.remove(this.currentMesh);
         this.currentPos.set(newPos.x, newPos.y, newPos.z);
@@ -44,7 +45,7 @@ export class NumberConstruct {
             scene.add(this.currentMesh);
         }
 
-        console.log("updateNumberMeshPos finished");
+        // console.log("updateNumberMeshPos finished");
     }
 
     getNumberMeshPos() {
@@ -71,7 +72,7 @@ export class NumberConstruct {
         this.numberToText();
 
         return new Promise(resolve => {
-            this.fontLoader.load(this.numberFont, function (font) {
+            this.fontLoader.load(this.numberFontPath, function (font) {
                 this.currentGeometry = new THREE.TextGeometry(this.numberText, {
                     font: font,
                     size: size,
@@ -125,25 +126,25 @@ export class NumberConstruct {
     matchFont() {
         switch (this.numberFont) {
             case 'Avenir Black':
-                this.numberFont = '/fonts/Avenir Black_Regular.json';
+                this.numberFontPath = '/fonts/Avenir Black_Regular.json';
                 break;
             case 'Crash Numbering Serif':
-                this.numberFont = '/fonts/CrashNumberingSerif_Regular.json';
+                this.numberFontPath = '/fonts/CrashNumberingSerif_Regular.json';
                 break;
             case 'Nexa Rust Handmade':
-                this.numberFont = '/fonts/Nexa Rust Handmade Extended_Regular.json';
+                this.numberFontPath = '/fonts/Nexa Rust Handmade Extended_Regular.json';
                 break;
             case 'Pecita':
-                this.numberFont = '/fonts/Pecita_Book.json'
+                this.numberFontPath = '/fonts/Pecita_Book.json'
                 break;
             case 'Press Start 2P':
-                this.numberFont = '/fonts/Press Start 2P_Regular.json'
+                this.numberFontPath = '/fonts/Press Start 2P_Regular.json'
                 break;
             case 'Roboto Bold':
-                this.numberFont = '/fonts/Roboto_Bold.json'
+                this.numberFontPath = '/fonts/Roboto_Bold.json'
                 break;
             default:
-                this.numberFont = '/fonts/Avenir Black_Regular.json';
+                this.numberFontPath = '/fonts/Avenir Black_Regular.json';
         }
     }
 
@@ -230,7 +231,7 @@ export class NumberConstruct {
         //this.currentMesh.scale.set(1, 1, this.cubeSideLength + 1);
 
         let webWorker = new Worker(new URL('./workers/numberConstructWorker.js', import.meta.url));
-        webWorker.postMessage([new THREE.Vector3(0, 0, 0), unitCubeNumber, unitCubeSideLength, this.cubeSideLength, this.numberText, this.numberFont, this.numberMeshScale, this.numberDepthScalingFactor, this.standardNumberSize, this.cubeSideLength + 1]);
+        webWorker.postMessage([new THREE.Vector3(0, 0, 0), unitCubeNumber, unitCubeSideLength, this.cubeSideLength, this.numberText, this.numberFontPath, this.numberMeshScale, this.numberDepthScalingFactor, this.standardNumberSize, this.cubeSideLength + 1]);
         webWorker.onmessage = e => {
             if (this.generatingCubeAllowed) {
                 console.log("Collision message received");
