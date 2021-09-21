@@ -23,9 +23,11 @@ export class NumberConstruct {
         //this.unitCubeGroup = new THREE.Group();
         this.instancedMesh;
         this.cubeSideLength = 0;
+        this.unitCubeSideLength = 0;
         this.numberDepthScalingFactor = 0;
         this.generatingCubeAllowed = true;
         this.generatingCubeDone = false;
+        this.cubePositions = [];
         // this.collisionRayCaster0 = new THREE.Raycaster();
         // this.collisionRayCaster1 = new THREE.Raycaster();
         // this.collisionRayCaster2 = new THREE.Raycaster();
@@ -54,6 +56,10 @@ export class NumberConstruct {
 
     getCubeSideLength() {
         return this.cubeSideLength;
+    }
+
+    getUnitCubeSideLength() {
+        return this.unitCubeSideLength;
     }
 
     addNumberMesh(renderer, scene, camera, material, addMesh = true, numberValue = this.numberValue, numberStyle = this.numberStyle, numberFont = this.numberFont,
@@ -219,8 +225,8 @@ export class NumberConstruct {
 
         this.cubeSideLength = Math.max(this.boundingBoxSize.x, this.boundingBoxSize.y) * 1.1 + 0.4;
 
-        const unitCubeSideLength = this.cubeSideLength / unitCubeNumber;
-        const unitCubeGeometry = new THREE.BoxGeometry(unitCubeSideLength, unitCubeSideLength, unitCubeSideLength);
+        this.unitCubeSideLength = this.cubeSideLength / unitCubeNumber;
+        const unitCubeGeometry = new THREE.BoxGeometry(this.unitCubeSideLength, this.unitCubeSideLength, this.unitCubeSideLength);
         //this.unitCubeGroup.clear();
 
         // let matrixScaling = new THREE.Matrix4();
@@ -231,7 +237,7 @@ export class NumberConstruct {
         //this.currentMesh.scale.set(1, 1, this.cubeSideLength + 1);
 
         let webWorker = new Worker(new URL('./workers/numberConstructWorker.js', import.meta.url));
-        webWorker.postMessage([new THREE.Vector3(0, 0, 0), unitCubeNumber, unitCubeSideLength, this.cubeSideLength, this.numberText, this.numberFontPath, this.numberMeshScale, this.numberDepthScalingFactor, this.standardNumberSize, this.cubeSideLength + 1]);
+        webWorker.postMessage([new THREE.Vector3(0, 0, 0), unitCubeNumber, this.unitCubeSideLength, this.cubeSideLength, this.numberText, this.numberFontPath, this.numberMeshScale, this.numberDepthScalingFactor, this.standardNumberSize, this.cubeSideLength + 1]);
         webWorker.onmessage = e => {
             if (this.generatingCubeAllowed) {
                 console.log("Collision message received");
@@ -239,14 +245,14 @@ export class NumberConstruct {
                 let positions = e.data[0];
                 let collisions = e.data[1];
 
-                let newPositions = [];
+                this.cubePositions = [];
                 let cubeCount = 0;
 
                 for (let i = 0; i < positions.length; i++) {
                     //this.unitCubeGroup.children[i].position.set(positions[i].x, positions[i].y, positions[i].z);
 
                     if (!collisions[i]) {
-                        newPositions.push(positions[i]);
+                        this.cubePositions.push(positions[i]);
                         cubeCount++;
                         // this.unitCubeGroup.children[i].material = materialEmpty;
                         // this.unitCubeGroup.children[i].castShadow = false;
@@ -260,7 +266,7 @@ export class NumberConstruct {
                 // identityQuaternion = identityQuaternion.identity();
 
                 for (let i = 0; i < cubeCount; i++) {
-                    matrixTranslation.makeTranslation(newPositions[i].x, newPositions[i].y, newPositions[i].z);
+                    matrixTranslation.makeTranslation(this.cubePositions[i].x, this.cubePositions[i].y, this.cubePositions[i].z);
                     this.instancedMesh.setMatrixAt(i + 1, matrixTranslation);
                 }
 
