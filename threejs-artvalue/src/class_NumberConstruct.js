@@ -8,6 +8,7 @@ export class NumberConstruct {
 
     constructor(numberValue, numberStyle, numberFont, position) {
         this.currentGeometry;
+        this.scaledGeometry;
         this.currentMesh = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), new THREE.MeshBasicMaterial({ color: 0xFFFFFF }));
         this.currentMesh.name = 'currentNumberMesh';
         this.fontLoader = new THREE.FontLoader();
@@ -18,6 +19,7 @@ export class NumberConstruct {
         this.numberFontPath;
         this.standardNumberSize = 2;
         this.numberMeshScale = 1;
+        this.inFrameNumberMeshScale = 1;
         this.boundingBoxSize = new THREE.Vector3(0, 0, 0);
         this.currentPos = new THREE.Vector3(position.x, position.y, position.z); // initial position
         //this.unitCubeGroup = new THREE.Group();
@@ -104,10 +106,17 @@ export class NumberConstruct {
                 boundingBox.setFromObject(this.currentMesh);
                 boundingBox.getSize(boundingBoxSizeTemp);
 
-                this.numberMeshScale = boundingBoxSizeTemp.x * size / boundingBoxSizeTemp.y <= 12 ? size / boundingBoxSizeTemp.y : 12 / boundingBoxSizeTemp.x;
-                //this.currentMesh.scale.set(this.numberMeshScale, this.numberMeshScale, this.numberMeshScale);
+                if (size !== this.standardNumberSize) {
+                    this.numberMeshScale = size / boundingBoxSizeTemp.y;
+                }
+                else {
+                    this.numberMeshScale = boundingBoxSizeTemp.x >= boundingBoxSizeTemp.y ? 9 / boundingBoxSizeTemp.x : 9 / boundingBoxSizeTemp.y;
+                }
+
+                this.inFrameNumberMeshScale = boundingBoxSizeTemp.x * size / boundingBoxSizeTemp.y <= 12 ? size / boundingBoxSizeTemp.y : 12 / boundingBoxSizeTemp.x;
+
                 let matrixScaling = new THREE.Matrix4();
-                matrixScaling.makeScale(this.numberMeshScale, this.numberMeshScale, 1);
+                matrixScaling.makeScale(this.inFrameNumberMeshScale, this.inFrameNumberMeshScale, 1);
                 this.currentMesh.geometry.applyMatrix4(matrixScaling);
                 this.currentMesh.setRotationFromAxisAngle(new THREE.Vector3(0, 1, 0), rotationAngle);
 
@@ -223,7 +232,7 @@ export class NumberConstruct {
 
         scene.remove(this.currentMesh);
 
-        this.cubeSideLength = Math.max(this.boundingBoxSize.x, this.boundingBoxSize.y) * 1.1 + 0.4;
+        this.cubeSideLength = 11;
 
         this.unitCubeSideLength = this.cubeSideLength / unitCubeNumber;
         const unitCubeGeometry = new THREE.BoxGeometry(this.unitCubeSideLength, this.unitCubeSideLength, this.unitCubeSideLength);
@@ -253,7 +262,7 @@ export class NumberConstruct {
 
                     if (!collisions[i]) {
                         this.cubePositions.push(positions[i]);
-                        cubeCount++;
+                        ++cubeCount;
                         // this.unitCubeGroup.children[i].material = materialEmpty;
                         // this.unitCubeGroup.children[i].castShadow = false;
                     }
@@ -262,13 +271,16 @@ export class NumberConstruct {
                 this.instancedMesh = new THREE.InstancedMesh(unitCubeGeometry, materialCube, cubeCount);
 
                 let matrixTranslation = new THREE.Matrix4();
-                // let identityQuaternion = new THREE.Quaternion();
-                // identityQuaternion = identityQuaternion.identity();
 
                 for (let i = 0; i < cubeCount; i++) {
                     matrixTranslation.makeTranslation(this.cubePositions[i].x, this.cubePositions[i].y, this.cubePositions[i].z);
-                    this.instancedMesh.setMatrixAt(i + 1, matrixTranslation);
+                    this.instancedMesh.setMatrixAt(i, matrixTranslation);
                 }
+
+                // let matrixTest = new THREE.Matrix4();
+                // this.instancedMesh.getMatrixAt(cubeCount - 1, matrixTest)
+                // console.log(cubeCount);
+                // console.log(matrixTest);
 
                 this.instancedMesh.instanceMatrix.needsUpdate = true;
                 this.instancedMesh.castShadow = true;

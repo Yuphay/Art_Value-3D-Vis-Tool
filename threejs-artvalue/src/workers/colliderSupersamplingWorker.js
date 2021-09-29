@@ -36,7 +36,7 @@ self.onmessage = function (e) {
         currentMesh.position.set(currentPos.x, currentPos.y, currentPos.z);
 
         let matrixScaling = new THREE.Matrix4();
-        matrixScaling.makeScale(numberMeshScale, numberMeshScale, numberMeshScale * numberDepthScalingFactor);
+        matrixScaling.makeScale(numberMeshScale, numberMeshScale, numberDepth);
         currentMesh.geometry.applyMatrix4(matrixScaling);
 
         let collisionRayCaster0 = new THREE.Raycaster();
@@ -117,6 +117,7 @@ self.onmessage = function (e) {
                 if (collisionRayIntersects1.length > 0) {
                     collisionCount++;
                 }
+                
                 xyCollisions[j].push(collisionCount);
             }
         }
