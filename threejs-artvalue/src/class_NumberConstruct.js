@@ -226,7 +226,7 @@ export class NumberConstruct {
     async generateCubeConstraint(renderer, scene, camera, unitCubeNumber, materialCube) {
 
         console.log("generateCubeConstraint started");
-
+        
         this.generatingCubeAllowed = true;
         this.generatingCubeDone = false;
 

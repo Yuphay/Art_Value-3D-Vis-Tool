@@ -12,6 +12,9 @@ import Stats from 'stats.js/src/Stats.js';
 
 import { NumberConstruct } from './class_NumberConstruct.js';
 
+import noiseVertexShader from './shaders/Perlin_noise/vertex.glsl';
+import noiseFragmentShader from './shaders/Perlin_noise/fragment.glsl'
+
 /**
  * Base
  */
@@ -54,27 +57,27 @@ let UILoaded = false;
 let styleOptions = ['European', 'European No Separator', 'US', 'US No Separator'];
 let fontOptions = ['Avenir Black', 'Crash Numbering Serif', 'Nexa Rust Handmade', 'Pecita', 'Press Start 2P', 'Roboto Bold'];
 
-// Debug
-const gui = new dat.GUI();
+// dat.gui
 
-let GUIOptions = {
+let mainNumberOptions = {
     lightHelperFlag: false,
     lightHelperEnabled: false,
-    numberValue: '1234.56',
+    numberValue: 1234.56,
     numberStyle: styleOptions[0],
     numberFont: fontOptions[0],
 
-    devMode: false
+    devMode: false,
+    qualityScalar: 1
 };
 
 let devMode;
 
-const testingControl = gui.addFolder('Testing');
-testingControl.add(GUIOptions, 'devMode').name('Dev Mode').onChange(devModeCallback);
-testingControl.open();
+// const testingControl = gui.addFolder('Testing');
+// testingControl.add(GUIOptions, 'devMode').name('Dev Mode').onChange(devModeCallback);
+// testingControl.open();
 
 function devModeCallback() {
-    devMode = GUIOptions.devMode;
+    devMode = mainNumberOptions.devMode;
     if (devMode === true) {
         document.body.appendChild(stats.domElement);
     }
@@ -94,7 +97,7 @@ document.body.appendChild(stats.domElement);
 
 // State Control
 const states = ['None', 'Room 1', '1 to 2', 'Room 2', '2 to 3', 'Room 3', '3 to 4', 'Room 4', '4 to 5', 'Room 5'];
-const roomPositions = [new THREE.Vector3(-20, 8, -58.6), new THREE.Vector3(-20, 10.5, -130), new THREE.Vector3(-130, 10.5, -130), new THREE.Vector3(-130, 10.5, -20), new THREE.Vector3(-75, 15, -75)];
+const roomPositions = [new THREE.Vector3(-20, 8, -58.6), new THREE.Vector3(-20, 10.5, -130), new THREE.Vector3(-130, 10.5, -130), new THREE.Vector3(-130, 10.5, -20), new THREE.Vector3(-80, 18, -70)];
 const ceilingLightPositions = [new THREE.Vector3(-40, 35, -40), new THREE.Vector3(-40, 35, -110), new THREE.Vector3(-110, 35, -110), new THREE.Vector3(-110, 35, -40)];
 const spotlightPositions = [new THREE.Vector3(-20, 23.2, -40), new THREE.Vector3(-20, 0, -75), new THREE.Vector3(-75, 0, -130), new THREE.Vector3(-130, 0, -75)];
 
@@ -196,24 +199,28 @@ new THREE.Euler(0, degreesToRadians(180), 0, 'XYZ'),
 new THREE.Euler(0, degreesToRadians(180), 0, 'XYZ')];
 
 let desiredCamPositions4To5 = [new THREE.Vector3(roomPositions[3].x + 30, 8.5, roomPositions[3].z - 30),
-new THREE.Vector3(-90, 8.5, -50),
-new THREE.Vector3(-85, 8.5, -45),
-new THREE.Vector3(-80, 8.5, -40),
-new THREE.Vector3(-70, 8.5, -50),
-new THREE.Vector3(-60, 10, -60),
-new THREE.Vector3(-60, 11.5, -70),
-new THREE.Vector3(-60, 13, -80),
-new THREE.Vector3(-70, 13.5, -80)];
+new THREE.Vector3(-85, 8.5, -40),
+new THREE.Vector3(-80, 8.5, -30),
+new THREE.Vector3(-70, 8.5, -20),
+new THREE.Vector3(-65, 8.5, -40),
+new THREE.Vector3(-55, 8.5, -55),
+new THREE.Vector3(-55, 12, -75),
+new THREE.Vector3(-55, 15, -90),
+new THREE.Vector3(-60, 16, -95),
+new THREE.Vector3(-66, 17, -95),
+new THREE.Vector3(-70, 18, -90)];
 
 let desiredCamOrientations4To5 = [new THREE.Euler(0, degreesToRadians(135), 0, 'XYZ'),
 new THREE.Euler(0, degreesToRadians(90), 0, 'XYZ'),
 new THREE.Euler(0, degreesToRadians(45), 0, 'XYZ'),
 new THREE.Euler(0, degreesToRadians(0), 0, 'XYZ'),
-new THREE.Euler(0, degreesToRadians(-30), 0, 'XYZ'),
+new THREE.Euler(0, degreesToRadians(-20), 0, 'XYZ'),
+new THREE.Euler(0, degreesToRadians(-5), 0, 'XYZ'),
 new THREE.Euler(0, degreesToRadians(0), 0, 'XYZ'),
-new THREE.Euler(0, degreesToRadians(0), 0, 'XYZ'),
-new THREE.Euler(0, degreesToRadians(0), 0, 'XYZ'),
-new THREE.Euler(0, degreesToRadians(90), 0, 'XYZ')];
+new THREE.Euler(0, degreesToRadians(30), 0, 'XYZ'),
+new THREE.Euler(0, degreesToRadians(90), 0, 'XYZ'),
+new THREE.Euler(0, degreesToRadians(120), 0, 'XYZ'),
+new THREE.Euler(0, degreesToRadians(140), 0, 'XYZ')];
 
 // Scene
 const scene = new THREE.Scene();
@@ -328,6 +335,38 @@ const materialEmpty = new THREE.MeshBasicMaterial({ color: 0x000000 });
 materialEmpty.transparent = true;
 materialEmpty.opacity = 0;
 
+
+// Classic 3D Perlin Noise Material
+
+let noiseOptions = {
+    depthColor: '#186691',
+    surfaceColor: '#9bd8ff'
+};
+
+const noiseMaterial = new THREE.ShaderMaterial({
+    vertexShader: noiseVertexShader,
+    fragmentShader: noiseFragmentShader,
+    uniforms:
+    {
+        uTime: { value: 0 },
+
+        uBigWavesElevation: { value: 0.05 },
+        uBigWavesFrequency: { value: new THREE.Vector2(2, 2) },
+        uBigWavesSpeed: { value: 1 },
+
+        uSmallWavesElevation: { value: 0.1 },
+        uSmallWavesFrequency: { value: 1 },
+        uSmallWavesSpeed: { value: 0.2 },
+        uSmallIterations: { value: 2 },
+
+        uDepthColor: { value: new THREE.Color(noiseOptions.depthColor) },
+        uSurfaceColor: { value: new THREE.Color(noiseOptions.surfaceColor) },
+        uColorOffset: { value: 0.08 },
+        uColorMultiplier: { value: 5 }
+    }
+});
+
+
 // Meshes
 let testingMesh = new THREE.Mesh(smallBoxGeometry, materialNumber);
 let styleButton;
@@ -404,12 +443,12 @@ directionalLight.shadow.camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 
 directionalLight.shadow.normalBias = 0.1;
 directionalLight.shadow.bias = 0.0001;
 
-const directionalLightControl = gui.addFolder("Directional Light");
-directionalLightControl.add(directionalLight.position, 'x').min(0).max(50).step(0.01).listen();
-directionalLightControl.add(directionalLight.position, 'y').min(0).max(100).step(0.01).listen();
-directionalLightControl.add(directionalLight.position, 'z').min(0).max(50).step(0.01).listen();
-directionalLightControl.add(directionalLight, 'intensity').min(0).max(10).step(0.01).listen();
-directionalLightControl.add(GUIOptions, 'lightHelperFlag').name('Light Helper').onChange(directionalLightHelperCallback);
+// const directionalLightControl = gui.addFolder("Directional Light");
+// directionalLightControl.add(directionalLight.position, 'x').min(0).max(50).step(0.01).listen();
+// directionalLightControl.add(directionalLight.position, 'y').min(0).max(100).step(0.01).listen();
+// directionalLightControl.add(directionalLight.position, 'z').min(0).max(50).step(0.01).listen();
+// directionalLightControl.add(directionalLight, 'intensity').min(0).max(10).step(0.01).listen();
+// directionalLightControl.add(GUIOptions, 'lightHelperFlag').name('Light Helper').onChange(directionalLightHelperCallback);
 
 const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 2, new THREE.Color('yellow'));
 directionalLightHelper.name = 'lightHelper';
@@ -418,13 +457,13 @@ directionalLightHelper.name = 'lightHelper';
 // scene.add(directionalLightCameraHelper);
 
 function directionalLightHelperCallback() {
-    if (GUIOptions.lightHelperFlag && !GUIOptions.lightHelperEnabled) {
+    if (mainNumberOptions.lightHelperFlag && !mainNumberOptions.lightHelperEnabled) {
         scene.add(directionalLightHelper);
-        GUIOptions.lightHelperEnabled = true;
+        mainNumberOptions.lightHelperEnabled = true;
     }
-    else if (!GUIOptions.lightHelperFlag && GUIOptions.lightHelperEnabled) {
+    else if (!mainNumberOptions.lightHelperFlag && mainNumberOptions.lightHelperEnabled) {
         scene.remove(scene.getObjectByName('lightHelper'));
-        GUIOptions.lightHelperEnabled = false;
+        mainNumberOptions.lightHelperEnabled = false;
     }
     requestRenderIfNotRequested('lightHelperCallback');
 }
@@ -584,6 +623,8 @@ let targetCamOrientation = new THREE.Quaternion();
 let startCamPosition = new THREE.Vector3(0, 0, 0);
 let startCamOrientation = new THREE.Quaternion();
 
+let materialAnimation = false;
+
 /**
  * Renderer
  */
@@ -603,8 +644,8 @@ renderer.toneMappingExposure = 1;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-const rendererControl = gui.addFolder("Renderer Properties");
-rendererControl.add(renderer, 'toneMappingExposure').min(0).max(2).step(0.01).onChange(requestRenderIfNotRequested);
+// const rendererControl = gui.addFolder("Renderer Properties");
+// rendererControl.add(renderer, 'toneMappingExposure').min(0).max(2).step(0.01).onChange(requestRenderIfNotRequested);
 
 
 /**
@@ -618,7 +659,7 @@ const updateAllMaterials = () => {
             child.castShadow = true;
             child.receiveShadow = true;
         }
-    })
+    });
 }
 
 /**
@@ -626,9 +667,20 @@ const updateAllMaterials = () => {
  */
 async function init() {
 
+    qualitySelectorSlider.remove();
+    document.body.removeChild(initUIText0);
+    document.body.removeChild(initUIText1);
+    document.body.removeChild(initUIText2);
+    document.body.removeChild(initUIText3);
+    document.body.removeChild(numberInputField);
+    document.body.removeChild(startButton);
+
     loadingBarElement0.style.transform = `scaleX(${0.1})`;
 
     console.assert(previousState === states[0]);
+
+    mainNumber = new NumberConstruct(mainNumberOptions.numberValue, mainNumberOptions.numberStyle, mainNumberOptions.numberFont,
+        new THREE.Vector3(roomPositions[0].x, roomPositions[0].y, roomPositions[0].z));
 
     camera.position.set(initialCamPos.x, initialCamPos.y, initialCamPos.z);
     camera.setRotationFromEuler(initialCamOrientation);
@@ -758,11 +810,11 @@ async function init() {
         environmentObjects.push(frame);
         scene.add(frame);
 
-        const smallNumber = new NumberConstruct(parseFloat(GUIOptions.numberValue), GUIOptions.numberStyle, GUIOptions.numberFont,
+        const smallNumber = new NumberConstruct(mainNumberOptions.numberValue, mainNumberOptions.numberStyle, mainNumberOptions.numberFont,
             new THREE.Vector3(zFramePositions[i].x, zFramePositions[i].y, zFramePositions[i].z));
 
         smallNumber.addNumberMesh(renderer, scene, camera, materialNumber, true, THREE.MathUtils.randFloat(0, Math.pow(10, THREE.MathUtils.randInt(0, 5))),
-            GUIOptions.numberStyle, GUIOptions.numberFont, 0.5, rotationAngle);
+            mainNumberOptions.numberStyle, mainNumberOptions.numberFont, 0.5, rotationAngle);
     }
 
     for (let i = 0; i < xFramePositions.length; i++) {
@@ -773,27 +825,26 @@ async function init() {
         environmentObjects.push(frame);
         scene.add(frame);
 
-        const smallNumber = new NumberConstruct(parseFloat(GUIOptions.numberValue), GUIOptions.numberStyle, GUIOptions.numberFont,
+        const smallNumber = new NumberConstruct(mainNumberOptions.numberValue, mainNumberOptions.numberStyle, mainNumberOptions.numberFont,
             new THREE.Vector3(xFramePositions[i].x, xFramePositions[i].y, xFramePositions[i].z));
         smallNumber.addNumberMesh(renderer, scene, camera, materialNumber, true, THREE.MathUtils.randFloat(0, Math.pow(10, THREE.MathUtils.randInt(0, 5))),
-            GUIOptions.numberStyle, GUIOptions.numberFont, 0.5, Math.PI);
+            mainNumberOptions.numberStyle, mainNumberOptions.numberFont, 0.5, Math.PI);
     }
 }
 
 // FRONT view
-const numberControl = gui.addFolder("Number Control");
-numberControl.add(GUIOptions, 'numberValue').name('Value').onFinishChange(numberMeshCallback);
-numberControl.add(GUIOptions, 'numberStyle', styleOptions).name('Style').onFinishChange(numberMeshCallback);
-numberControl.add(GUIOptions, 'numberFont', fontOptions).name('Font').onFinishChange(numberMeshCallback);
+// const numberControl = gui.addFolder("Number Control");
+// numberControl.add(GUIOptions, 'numberValue').name('Value').onFinishChange(numberMeshCallback);
+// numberControl.add(GUIOptions, 'numberStyle', styleOptions).name('Style').onFinishChange(numberMeshCallback);
+// numberControl.add(GUIOptions, 'numberFont', fontOptions).name('Font').onFinishChange(numberMeshCallback);
 
-const mainNumber = new NumberConstruct(parseFloat(GUIOptions.numberValue), GUIOptions.numberStyle, GUIOptions.numberFont,
-    new THREE.Vector3(roomPositions[0].x, roomPositions[0].y, roomPositions[0].z));
 
-let mainNumberClone;
+let mainNumber;
+let mainNumberMeshClone;
 
 async function numberMeshCallback() {
     if (currentState === states[1]) {
-        Promise.all([mainNumber.addNumberMesh(renderer, scene, camera, materialNumber, true, GUIOptions.numberValue, GUIOptions.numberStyle, GUIOptions.numberFont)]).then(result => {
+        Promise.all([mainNumber.addNumberMesh(renderer, scene, camera, materialNumber, true, mainNumberOptions.numberValue, mainNumberOptions.numberStyle, mainNumberOptions.numberFont)]).then(result => {
             requestRenderIfNotRequested('numberMeshCallback');
         })
     }
@@ -813,7 +864,7 @@ function enterNewState() {
 
         if (previousState === states[2]) {
             mainNumber.removePreviousCubes(scene);
-            scene.remove(mainNumberClone);
+            scene.remove(mainNumberMeshClone);
 
             // let matrixScaling = new THREE.Matrix4();
             // matrixScaling.makeScale(1, 1, 1 / mainNumber.numberDepthScalingFactor);
@@ -849,11 +900,11 @@ function enterNewState() {
         middleWheelIconAdded = false;
 
         if (currentCamPosIndex !== desiredCamPositions1To2.length - 2) {
-            mainNumberClone = mainNumber.currentMesh.clone();
-            scene.add(mainNumberClone);
+            mainNumberMeshClone = mainNumber.currentMesh.clone();
+            scene.add(mainNumberMeshClone);
 
             mainNumber.updateNumberMeshPos(scene, new THREE.Vector3(roomPositions[1].x, roomPositions[1].y, roomPositions[1].z));
-            mainNumber.generateCubeConstraint(renderer, scene, camera, 128, materialCube.clone());
+            mainNumber.generateCubeConstraint(renderer, scene, camera, Math.round(128 * mainNumberOptions.qualityScalar), materialCube.clone());
 
             let animTime;
             if (mainNumber.numberFont !== fontOptions[4]) {
@@ -870,6 +921,12 @@ function enterNewState() {
         else {
             console.log('Back');
 
+            groundSpotLight1.intensity = 0;
+            groundSpotLight1.castShadow = false;
+            groundLight1Effect.intensity = 0;
+
+            mainNumber.instancedMesh.castShadow = false;
+
             cameraAnimationDispatcher(
                 camera.position,
                 new THREE.Vector3(
@@ -878,27 +935,12 @@ function enterNewState() {
                     mainNumber.getNumberMeshPos().z + mainNumber.getCubeSideLength() / 2 + cameraOffset),
                 camera.quaternion,
                 new THREE.Euler(0, 0, 0, 'XYZ'), 2);
-
-            groundSpotLight1.intensity = 0;
-            groundSpotLight1.castShadow = false;
-            groundLight1Effect.intensity = 0;
-
-            mainNumber.instancedMesh.castShadow = false;
         }
     }
     else if (currentState === states[3]) { // room 2
 
         orbitControls.target = mainNumber.getNumberMeshPos();
         wheelMovementEnabled = false;
-
-        cameraAnimationDispatcher(
-            camera.position,
-            new THREE.Vector3(
-                mainNumber.getNumberMeshPos().x,
-                mainNumber.getNumberMeshPos().y,
-                mainNumber.getNumberMeshPos().z + mainNumber.getCubeSideLength() / 2 + cameraOffset),
-            camera.quaternion,
-            new THREE.Euler(0, 0, 0, 'XYZ'), 1);
 
         // Update Lighting
         spotlightTargetObject.position.set(mainNumber.getNumberMeshPos().x, mainNumber.getNumberMeshPos().y, mainNumber.getNumberMeshPos().z);
@@ -922,6 +964,15 @@ function enterNewState() {
         orbitControls.saveState();
         savedCamPos.set(targetCamPosition.x, targetCamPosition.y, targetCamPosition.z);
         console.log("Camera control state saved");
+
+        cameraAnimationDispatcher(
+            camera.position,
+            new THREE.Vector3(
+                mainNumber.getNumberMeshPos().x,
+                mainNumber.getNumberMeshPos().y,
+                mainNumber.getNumberMeshPos().z + mainNumber.getCubeSideLength() / 2 + cameraOffset),
+            camera.quaternion,
+            new THREE.Euler(0, 0, 0, 'XYZ'), 1.5);
 
         // // Turn on All Lights
         // scene.add(spotLight0);
@@ -962,15 +1013,6 @@ function enterNewState() {
             imageSideGenerated = false;
         }
 
-        cameraAnimationDispatcher(
-            camera.position,
-            new THREE.Vector3(
-                mainNumber.getNumberMeshPos().x,
-                mainNumber.getNumberMeshPos().y,
-                mainNumber.getNumberMeshPos().z + mainNumber.getCubeSideLength() / 2 + cameraOffset),
-            camera.quaternion,
-            new THREE.Euler(0, degreesToRadians(0), 0, 'XYZ'), 2);
-
         spotlightTargetObject.position.set(mainNumber.getNumberMeshPos().x, mainNumber.getNumberMeshPos().y, mainNumber.getNumberMeshPos().z);
         groundSpotLight1.target = spotlightTargetObject;
         groundSpotLight2.target = spotlightTargetObject;
@@ -1007,6 +1049,15 @@ function enterNewState() {
         groundLight2.setRotationFromEuler(new THREE.Euler(0, degreesToRadians(-180), 0, 'XYZ'));
         scene.add(groundLight1);
         scene.add(groundLight2);
+
+        cameraAnimationDispatcher(
+            camera.position,
+            new THREE.Vector3(
+                mainNumber.getNumberMeshPos().x,
+                mainNumber.getNumberMeshPos().y,
+                mainNumber.getNumberMeshPos().z + mainNumber.getCubeSideLength() / 2 + cameraOffset),
+            camera.quaternion,
+            new THREE.Euler(0, degreesToRadians(0), 0, 'XYZ'), 2);
 
         orbitControls.saveState();
         savedCamPos.set(targetCamPosition.x, targetCamPosition.y, targetCamPosition.z);
@@ -1062,16 +1113,25 @@ function enterNewState() {
             desiredCamOrientations4To5[0], 1.5);
     }
     else if (currentState === states[9]) { // room 5
+        scene.traverse((child) => {
+            if (child instanceof THREE.Mesh && child.material != noiseMaterial) {
+                child.visible = false;
+            }
+        });
+
+        environmentObjects.length = 0;
+        cameraCollisionDetectionEnabled = false;
+
         orbitControls.target = mainNumber.getNumberMeshPos();
 
         cameraAnimationDispatcher(
             camera.position,
             new THREE.Vector3(
-                mainNumber.getNumberMeshPos().x + mainNumber.getCubeSideLength() / 2 + 10,
+                mainNumber.getNumberMeshPos().x + mainNumber.getCubeSideLength() / 2 + 12,
                 mainNumber.getNumberMeshPos().y,
-                mainNumber.getNumberMeshPos().z),
+                mainNumber.getNumberMeshPos().z - mainNumber.getCubeSideLength() / 2 - 12),
             camera.quaternion,
-            new THREE.Euler(0, degreesToRadians(90), 0, 'XYZ'), 1.5);
+            new THREE.Euler(0, degreesToRadians(135), 0, 'XYZ'), 1.5);
 
         orbitControls.saveState();
         savedCamPos.set(targetCamPosition.x, targetCamPosition.y, targetCamPosition.z);
@@ -1090,10 +1150,14 @@ const cameraRayCaster = new THREE.Raycaster();
  * Animation Loop (View)
  */
 
-const clock = new THREE.Clock();
-clock.autoStart = false;
+const clockForCamera = new THREE.Clock();
+clockForCamera.autoStart = false;
+
+const clockForShader = new THREE.Clock();
+clockForShader.autoStart = false;
 
 let cameraCollisionDetectionVector;
+let cameraCollisionDetectionEnabled = true;
 let cameraAnimationTime = 0;
 let orbitControlsEnableAllowed = true;
 
@@ -1158,7 +1222,7 @@ const tick = () => {
             }
         }
 
-        if (!devMode && orbitControls.enabled) {
+        if (!devMode && orbitControls.enabled && cameraCollisionDetectionEnabled) {
             cameraCollisionDetectionVector = new THREE.Vector3(camera.position.x - orbitControls.target.x,
                 camera.position.y - orbitControls.target.y, camera.position.z - orbitControls.target.z);
 
@@ -1199,7 +1263,7 @@ const tick = () => {
             if (new THREE.Vector3(newTargetCamPosition.x - camera.position.x, newTargetCamPosition.y - camera.position.y, newTargetCamPosition.z - camera.position.z).lengthSq() < 0.04) {
                 cameraAnimation = false;
                 cameraAnimationTime = 0;
-                clock.stop();
+                clockForCamera.stop();
 
                 scene.add(UIInstructionMesh6);
                 initialCameraAnimationDone = true;
@@ -1213,7 +1277,7 @@ const tick = () => {
             camera.position.lerpVectors(startCamPosition, targetCamPosition, cameraAnimationTime / cameraAnimationDuration);
             camera.quaternion.slerpQuaternions(startCamOrientation, targetCamOrientation, cameraAnimationTime / cameraAnimationDuration);
 
-            cameraAnimationTime += clock.getDelta();
+            cameraAnimationTime += clockForCamera.getDelta();
         }
 
         // console.log(camera.quaternion.dot(targetCamOrientation))
@@ -1258,6 +1322,39 @@ const tick = () => {
                 ceilingLight3.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
             }
         }
+        // room 4 to 5
+        else if (currentState === states[8]) {
+            if (ceilingLightsOnEnabled) {
+                if (currentCamPosIndex === desiredCamPositions4To5.length - 2) {
+                    // if (ambientLight.intensity < 0.7) ambientLight.intensity += 0.01;
+                    ceilingLight0.color.lerpColors(new THREE.Color(0x000000), new THREE.Color(0xFFFFFF), cameraAnimationTime / cameraAnimationDuration);
+                    ceilingLight1.color.lerpColors(new THREE.Color(0x000000), new THREE.Color(0xFFFFFF), cameraAnimationTime / cameraAnimationDuration);
+                    ceilingLight2.color.lerpColors(new THREE.Color(0x000000), new THREE.Color(0xFFFFFF), cameraAnimationTime / cameraAnimationDuration);
+                    ceilingLight3.color.lerpColors(new THREE.Color(0x000000), new THREE.Color(0xFFFFFF), cameraAnimationTime / cameraAnimationDuration);
+                }
+                else {
+                    ceilingLight0.color.lerpColors(new THREE.Color(0x000000), new THREE.Color(0xFFFFFF), cameraAnimationTime / cameraAnimationDuration);
+                    ceilingLight1.color.lerpColors(new THREE.Color(0x000000), new THREE.Color(0xFFFFFF), cameraAnimationTime / cameraAnimationDuration);
+                    ceilingLight2.color.lerpColors(new THREE.Color(0x000000), new THREE.Color(0xFFFFFF), cameraAnimationTime / cameraAnimationDuration);
+                    ceilingLight3.color.lerpColors(new THREE.Color(0x000000), new THREE.Color(0xFFFFFF), cameraAnimationTime / cameraAnimationDuration);
+                }
+            }
+            else if (ceilingLightsOffEnabled) {
+                if (currentCamPosIndex === desiredCamPositions4To5.length - 3) {
+                    // if (ambientLight.intensity > 0) ambientLight.intensity -= 0.01;
+                    ceilingLight0.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
+                    ceilingLight1.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
+                    ceilingLight2.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
+                    ceilingLight3.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
+                }
+                else {
+                    ceilingLight0.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
+                    ceilingLight1.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
+                    ceilingLight2.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
+                    ceilingLight3.color.lerpColors(new THREE.Color(0xFFFFFF), new THREE.Color(0x000000), cameraAnimationTime / cameraAnimationDuration);
+                }
+            }
+        }
 
         if (initialCameraAnimationDone && (cameraAnimationTime >= cameraAnimationDuration)) {
 
@@ -1266,7 +1363,7 @@ const tick = () => {
 
             cameraAnimation = false;
             cameraAnimationTime = 0;
-            clock.stop();
+            clockForCamera.stop();
 
             if (currentState === states[2]) {
 
@@ -1478,6 +1575,8 @@ const tick = () => {
                     activeButtons.push(confirmButton);
                 }
                 else {
+                    releaseInstancedMeshMemeory();
+
                     loadingOverlay.visible = true;
                     requestRenderIfNotRequested("loadingOverlay visible");
 
@@ -1526,29 +1625,68 @@ const tick = () => {
                     currentState = states[7];
                     wheelMovementEnabled = false;
                 }
-                else if (currentCamPosIndex === desiredCamPositions4To5.length - 3) {
+                else if (currentCamPosIndex === desiredCamPositions4To5.length - 3 || currentCamPosIndex === 4 || currentCamPosIndex === 2) {
+                    // ambientLight.intensity = 0.7;
+                    ceilingLightsOnEnabled = false;
+                }
+                else if (currentCamPosIndex === 3) {
                     if (ceilingLightsOffEnabled) {
-                        ceilingLightsOnEnabled = false;
+                        ceilingLight0.intensity = 0;
+                        ceilingLight1.intensity = 0;
+                        ceilingLight2.intensity = 0;
+                        ceilingLight3.intensity = 0;
+                        ceilingLight0.castShadow = false;
+                        ceilingLight1.castShadow = false;
+                        ceilingLight2.castShadow = false;
+                        ceilingLight3.castShadow = false;
+
+                        ceilingLightsOffEnabled = false;
                     }
                 }
                 else if (currentCamPosIndex === desiredCamPositions4To5.length - 2) {
-                    ceilingLight3.intensity = 0;
-                    ceilingLight3.castShadow = false;
+                    if (ceilingLightsOffEnabled) {
+                        // ambientLight.intensity = 0.3;
+                        ceilingLight0.intensity = 0;
+                        ceilingLight1.intensity = 0;
+                        ceilingLight2.intensity = 0;
+                        ceilingLight3.intensity = 0;
+                        ceilingLight0.castShadow = false;
+                        ceilingLight1.castShadow = false;
+                        ceilingLight2.castShadow = false;
+                        ceilingLight3.castShadow = false;
 
-                    ceilingLightsOffEnabled = false;
+                        ceilingLightsOffEnabled = false;
+                    }
                 }
             }
             else if (currentState === states[9]) {
 
-                releaseSTLMemory();
+                addGUI();
+
+                materialAnimation = true;    
+                clockForShader.start();
 
                 leftClickIcon.visible = true;
                 rightClickIcon.visible = true;
                 middleWheelIcon.visible = true;
 
-                if (goingBackEnabled) {
-                    goingBackEnabled = false;
-                }
+                leftClickIcon.traverse((child) => {
+                    if (child instanceof THREE.Mesh) {
+                        child.visible = true;
+                    }
+                });
+
+                rightClickIcon.traverse((child) => {
+                    if (child instanceof THREE.Mesh) {
+                        child.visible = true;
+                    }
+                });
+
+                middleWheelIcon.traverse((child) => {
+                    if (child instanceof THREE.Mesh) {
+                        child.visible = true;
+                    }
+                });
             }
         }
 
@@ -1623,6 +1761,14 @@ const tick = () => {
         requestRenderIfNotRequested('iconAnimation');
     }
 
+    // Material animation
+    if (materialAnimation) {
+        const elapsedTime = clockForShader.getElapsedTime();
+        noiseMaterial.uniforms.uTime.value = elapsedTime;
+
+        requestRenderIfNotRequested('materialAnimation');
+    }
+
     // Debug
     stats.update();
 
@@ -1648,9 +1794,107 @@ function requestRenderIfNotRequested(caller) {
     }
 }
 
-init();
+let initUIText3 = document.createElement('p');
+initUIText3.innerHTML = 'For a smoother experience, you may prepare a personally meaningful picture/image/drawing related to your number before getting started. (preferably in .jpg or .png)';
+initUIText3.style.fontFamily = 'verdana';
+initUIText3.style.fontSize = '120%';
+initUIText3.style.color = '#ffffff';
+initUIText3.style.textAlign = 'center';
+initUIText3.style.width = '40%';
+initUIText3.style.top = '25%';
+initUIText3.style.left = '30%';
+initUIText3.style.position = 'absolute';
+initUIText3.style.lineHeight = '120%';
 
-tick();
+let initUIText0 = document.createElement('p');
+initUIText0.innerHTML = 'Please input your number from the auction:';
+initUIText0.style.fontFamily = 'verdana';
+initUIText0.style.fontSize = '100%';
+initUIText0.style.color = '#ffffff';
+initUIText0.style.textAlign = 'center';
+initUIText0.style.width = '50%';
+initUIText0.style.top = '45%';
+initUIText0.style.left = '25%';
+initUIText0.style.position = 'absolute';
+
+let numberInputField = document.createElement("input");
+numberInputField.setAttribute('type', 'text');
+numberInputField.style.width = '14%';
+numberInputField.style.top = '49%';
+numberInputField.style.left = '43%';
+numberInputField.style.position = 'absolute';
+numberInputField.style.textAlign = 'center';
+
+let initUIText1 = document.createElement('p');
+initUIText1.innerHTML = 'Please select the quality based on your device:';
+initUIText1.style.fontFamily = 'verdana';
+initUIText1.style.fontSize = '100%';
+initUIText1.style.color = '#ffffff';
+initUIText1.style.textAlign = 'center';
+initUIText1.style.width = '50%';
+initUIText1.style.top = '55%';
+initUIText1.style.left = '25%';
+initUIText1.style.position = 'absolute';
+
+let qualitySelectorSlider = document.getElementById("qualitySelector");
+qualitySelectorSlider.oninput = function () {
+    if (this.value == 1) {
+        initUIText2.innerHTML = 'Low';
+        mainNumberOptions.qualityScalar = 0.625;
+    }
+    else if (this.value == 2) {
+        initUIText2.innerHTML = 'Medium';
+        mainNumberOptions.qualityScalar = 0.78125;
+    }
+    else if (this.value == 3) {
+        initUIText2.innerHTML = 'High';
+        mainNumberOptions.qualityScalar = 1;
+    }
+}
+
+let initUIText2 = document.createElement('p');
+initUIText2.innerHTML = 'High';
+initUIText2.style.fontFamily = 'verdana';
+initUIText2.style.fontSize = '100%';
+initUIText2.style.color = '#ffffff';
+initUIText2.style.textAlign = 'center';
+initUIText2.style.width = '50%';
+initUIText2.style.top = '62%';
+initUIText2.style.left = '25%';
+initUIText2.style.position = 'absolute';
+
+let startButton = document.createElement("button");
+startButton.innerHTML = "START";
+startButton.style.textAlign = 'center';
+startButton.style.top = '70%';
+startButton.style.left = '48%';
+startButton.style.position = 'absolute';
+startButton.style.borderRadius = '12px';
+startButton.style.padding = '8px 12px';
+startButton.style.color = 'black';
+startButton.style.backgroundColor = '#e7e7e7';
+startButton.style.fontSize = '16px';
+
+startButton.addEventListener("click", function () {
+
+    if (isNaN(parseFloat(numberInputField.value))) {
+        alert("Please input a valid number");
+    }
+    else {
+        mainNumberOptions.numberValue = parseFloat(numberInputField.value);
+
+        init();
+
+        tick();
+    }
+});
+
+document.body.appendChild(initUIText0);
+document.body.appendChild(initUIText1);
+document.body.appendChild(initUIText2);
+document.body.appendChild(initUIText3);
+document.body.appendChild(numberInputField);
+document.body.appendChild(startButton);
 
 
 /**
@@ -1672,226 +1916,224 @@ function onMouseMove(event) {
 
 function onClick(event) {
 
-    if (onClickPhase1 && !cameraAnimation) {
-        iconAnimation = true;
+    if (initialCameraAnimationDone) {
+        if (onClickPhase1 && !cameraAnimation) {
+            iconAnimation = true;
 
-        onClickPhase1 = false;
-    }
-    else if (onClickPhase2) {
-        scene.remove(UIInstructionMesh7);
-        scene.add(mainNumber.currentMesh);
-
-        spotLight0.target = largeFrame;
-        // scene.add(spotLight0);
-        // scene.add(spotLightEffect);
-        spotLight0.intensity = 40;
-        spotLight0.castShadow = true;
-        spotLightEffect.intensity = 10;
-        spotLightEffect.castShadow = true;
-
-        requestRenderIfNotRequested('mainNumber added');
-
-        onClickPhase2 = false;
-        onClickPhase3 = true;
-    }
-    else if (onClickPhase3) {
-        scene.remove(UIInstructionMesh6);
-        loadUI();
-
-        onClickPhase3 = false;
-    }
-
-    if (confirmButton.material === materialSelected) {
-        if (currentState === states[1]) {
-            if (UIMenuExpanded[0]) collapseUIMenu(0);
-            if (UIMenuExpanded[1]) collapseUIMenu(1);
-            removeUI();
-            confirmButton.material = materialUnselected;
-
-            currentState = states[2];
-
-            currentCamPosIndex = 0;
+            onClickPhase1 = false;
         }
-        else if (currentState === states[3]) {
-            scene.remove(confirmButton);
-            scene.remove(cancelButton);
-            confirmButton.material = materialUnselected;
-            cancelButton.material = materialUnselected;
-            scene.remove(tickMesh);
-            scene.remove(crossMesh);
-            activeButtons.length = 0;
+        else if (onClickPhase2) {
+            scene.remove(UIInstructionMesh7);
+            scene.add(mainNumber.currentMesh);
 
-            currentState = states[4];
+            spotLight0.target = largeFrame;
+            // scene.add(spotLight0);
+            // scene.add(spotLightEffect);
+            spotLight0.intensity = 40;
+            spotLight0.castShadow = true;
+            spotLightEffect.intensity = 10;
+            spotLightEffect.castShadow = true;
 
-            wheelMovementEnabled = false;
-            currentCamPosIndex = 0;
-            goingBackEnabled = false;
+            requestRenderIfNotRequested('mainNumber added');
+
+            onClickPhase2 = false;
+            onClickPhase3 = true;
         }
-        else if (currentState === states[5] && imageSideGenerated) {
-            scene.remove(confirmButton);
-            scene.remove(cancelButton);
-            confirmButton.material = materialUnselected;
-            cancelButton.material = materialUnselected;
-            scene.remove(tickMesh);
-            scene.remove(crossMesh);
-            activeButtons.length = 0;
+        else if (onClickPhase3) {
+            scene.remove(UIInstructionMesh6);
+            loadUI();
 
-            currentState = states[6];
-
-            wheelMovementEnabled = false;
-            currentCamPosIndex = 0;
-            goingBackEnabled = false;
+            onClickPhase3 = false;
         }
-        else if (currentState === states[7]) {
-            scene.remove(confirmButton);
-            confirmButton.material = materialUnselected;
-            scene.remove(tickMesh);
-            activeButtons.length = 0;
 
-            leftClickIcon.visible = false;
-            rightClickIcon.visible = false;
-            middleWheelIcon.visible = false;
+        if (confirmButton.material === materialSelected) {
+            if (currentState === states[1]) {
+                if (UIMenuExpanded[0]) collapseUIMenu(0);
+                if (UIMenuExpanded[1]) collapseUIMenu(1);
+                removeUI();
+                confirmButton.material = materialUnselected;
 
-            // Ascii
-            // const result = stlExporter.parse(mergedFinalMesh);
-            // saveFile(new Blob([result], { type: 'text/plain' }), '3D_Print.stl');
+                currentState = states[2];
 
-            // Binary
-            const result = stlExporter.parse(mergedFinalMesh, { binary: true });
-            saveFile(new Blob([result], { type: 'application/octet-stream' }), '3D_Print.stl');
+                currentCamPosIndex = 0;
+            }
+            else if (currentState === states[3]) {
+                scene.remove(confirmButton);
+                scene.remove(cancelButton);
+                confirmButton.material = materialUnselected;
+                cancelButton.material = materialUnselected;
+                scene.remove(tickMesh);
+                scene.remove(crossMesh);
+                activeButtons.length = 0;
 
-            currentState = states[8];
+                currentState = states[4];
 
-            wheelMovementEnabled = false;
-            currentCamPosIndex = 0;
-            goingBackEnabled = false;
+                wheelMovementEnabled = false;
+                currentCamPosIndex = 0;
+                goingBackEnabled = false;
+            }
+            else if (currentState === states[5] && imageSideGenerated) {
+                scene.remove(confirmButton);
+                scene.remove(cancelButton);
+                confirmButton.material = materialUnselected;
+                cancelButton.material = materialUnselected;
+                scene.remove(tickMesh);
+                scene.remove(crossMesh);
+                activeButtons.length = 0;
+
+                currentState = states[6];
+
+                wheelMovementEnabled = false;
+                currentCamPosIndex = 0;
+                goingBackEnabled = false;
+            }
+            else if (currentState === states[7]) {
+                scene.remove(confirmButton);
+                confirmButton.material = materialUnselected;
+                scene.remove(tickMesh);
+                activeButtons.length = 0;
+
+                leftClickIcon.visible = false;
+                rightClickIcon.visible = false;
+                middleWheelIcon.visible = false;
+
+                // Ascii
+                // const result = stlExporter.parse(mergedFinalMesh);
+                // saveFile(new Blob([result], { type: 'text/plain' }), '3D_Print.stl');
+
+                // Binary
+                const result = stlExporter.parse(mergedFinalMesh, { binary: true });
+                saveFile(new Blob([result], { type: 'application/octet-stream' }), '3D_Print.stl');
+
+                currentState = states[8];
+
+                wheelMovementEnabled = false;
+                currentCamPosIndex = 0;
+                goingBackEnabled = false;
+            }
         }
-    }
-    else if (cancelButton.material === materialSelected) {
-        if (currentState === states[3]) {
-            scene.remove(confirmButton);
-            scene.remove(cancelButton);
-            confirmButton.material = materialUnselected;
-            cancelButton.material = materialUnselected;
-            scene.remove(tickMesh);
-            scene.remove(crossMesh);
-            activeButtons.length = 0;
+        else if (cancelButton.material === materialSelected) {
+            if (currentState === states[3]) {
+                scene.remove(confirmButton);
+                scene.remove(cancelButton);
+                confirmButton.material = materialUnselected;
+                cancelButton.material = materialUnselected;
+                scene.remove(tickMesh);
+                scene.remove(crossMesh);
+                activeButtons.length = 0;
 
-            currentState = states[2];
+                currentState = states[2];
 
-            currentCamPosIndex = desiredCamPositions1To2.length - 2;
-            goingBackEnabled = true;
+                currentCamPosIndex = desiredCamPositions1To2.length - 2;
+                goingBackEnabled = true;
+            }
+            else if (currentState === states[5] && imageSideGenerated) {
+                scene.remove(confirmButton);
+                scene.remove(cancelButton);
+                confirmButton.material = materialUnselected;
+                cancelButton.material = materialUnselected;
+                scene.remove(tickMesh);
+                scene.remove(crossMesh);
+                activeButtons.length = 0;
+
+                scene.remove(finalInstancedMesh);
+                imageSideGenerated = false;
+
+                scene.add(mainNumber.instancedMesh);
+
+                wheelMovementEnabled = false;
+
+                orbitControls.target = mainNumber.getNumberMeshPos();
+
+                leftClickIcon.visible = false;
+                rightClickIcon.visible = false;
+                middleWheelIcon.visible = false;
+
+                // spotlightTargetObject.position.set(mainNumber.getNumberMeshPos().x, mainNumber.getNumberMeshPos().y, mainNumber.getNumberMeshPos().z);
+                // groundSpotLight1.target = spotlightTargetObject;
+                // groundSpotLight2.target = spotlightTargetObject;
+                // mainNumber.instancedMesh.position.set(roomPositions[2].x, roomPositions[2].y, roomPositions[2].z);
+                // mainNumber.instancedMesh.setRotationFromEuler(new THREE.Euler(0, degreesToRadians(90), 0, 'XYZ'));
+                // mainNumber.instancedMesh.castShadow = true;
+                // scene.add(mainNumber.instancedMesh);
+
+                groundSpotLight1.position.set(spotlightPositions[2].x - 2, roomPositions[2].y, spotlightPositions[2].z);
+                groundLight1Effect.position.set(spotlightPositions[2].x - 2, roomPositions[2].y - 1, spotlightPositions[2].z);
+                groundSpotLight1.intensity = 200;
+                groundSpotLight1.castShadow = true;
+                groundLight1Effect.intensity = 20;
+
+                groundSpotLight2.intensity = 0;
+                groundSpotLight2.castShadow = false;
+                groundLight2Effect.intensity = 0;
+
+                cameraAnimationDispatcher(
+                    camera.position,
+                    new THREE.Vector3(
+                        mainNumber.getNumberMeshPos().x,
+                        mainNumber.getNumberMeshPos().y,
+                        mainNumber.getNumberMeshPos().z + mainNumber.getCubeSideLength() / 2 + cameraOffset),
+                    camera.quaternion,
+                    new THREE.Euler(0, degreesToRadians(0), 0, 'XYZ'), 1.5);
+            }
         }
-        else if (currentState === states[5] && imageSideGenerated) {
-            scene.remove(confirmButton);
-            scene.remove(cancelButton);
-            confirmButton.material = materialUnselected;
-            cancelButton.material = materialUnselected;
-            scene.remove(tickMesh);
-            scene.remove(crossMesh);
-            activeButtons.length = 0;
-
-            scene.remove(finalInstancedMesh);
-            imageSideGenerated = false;
-
-            scene.add(mainNumber.instancedMesh);
-
-            wheelMovementEnabled = false;
-
-            orbitControls.target = mainNumber.getNumberMeshPos();
-
-            leftClickIcon.visible = false;
-            rightClickIcon.visible = false;
-            middleWheelIcon.visible = false;
-
-            cameraAnimationDispatcher(
-                camera.position,
-                new THREE.Vector3(
-                    mainNumber.getNumberMeshPos().x,
-                    mainNumber.getNumberMeshPos().y,
-                    mainNumber.getNumberMeshPos().z + mainNumber.getCubeSideLength() / 2 + cameraOffset),
-                camera.quaternion,
-                new THREE.Euler(0, degreesToRadians(0), 0, 'XYZ'), 1.5);
-
-            // spotlightTargetObject.position.set(mainNumber.getNumberMeshPos().x, mainNumber.getNumberMeshPos().y, mainNumber.getNumberMeshPos().z);
-            // groundSpotLight1.target = spotlightTargetObject;
-            // groundSpotLight2.target = spotlightTargetObject;
-            // mainNumber.instancedMesh.position.set(roomPositions[2].x, roomPositions[2].y, roomPositions[2].z);
-            // mainNumber.instancedMesh.setRotationFromEuler(new THREE.Euler(0, degreesToRadians(90), 0, 'XYZ'));
-            // mainNumber.instancedMesh.castShadow = true;
-            // scene.add(mainNumber.instancedMesh);
-
-            groundSpotLight1.position.set(spotlightPositions[2].x - 2, roomPositions[2].y, spotlightPositions[2].z);
-            groundLight1Effect.position.set(spotlightPositions[2].x - 2, roomPositions[2].y - 1, spotlightPositions[2].z);
-            groundSpotLight1.intensity = 200;
-            groundSpotLight1.castShadow = true;
-            groundLight1Effect.intensity = 20;
-
-            groundSpotLight2.intensity = 0;
-            groundSpotLight2.castShadow = false;
-            groundLight2Effect.intensity = 0;
+        else if (styleButton.material === materialSelected) {
+            if (!UIMenuExpanded[0]) {
+                if (UIMenuExpanded[1]) collapseUIMenu(1);
+                expandUIMenu(0);
+            }
+            else {
+                collapseUIMenu(0);
+            }
         }
-    }
-    else if (styleButton.material === materialSelected) {
-        if (!UIMenuExpanded[0]) {
-            if (UIMenuExpanded[1]) collapseUIMenu(1);
-            expandUIMenu(0);
+        else if (fontButton.material === materialSelected) {
+            if (!UIMenuExpanded[1]) {
+                if (UIMenuExpanded[0]) collapseUIMenu(0);
+                expandUIMenu(1);
+            }
+            else {
+                collapseUIMenu(1);
+            }
         }
-        else {
-            collapseUIMenu(0);
+        else if (styleButton1.material === materialSelected) {
+            confirmUIMenu(0, 0);
         }
-    }
-    else if (fontButton.material === materialSelected) {
-        if (!UIMenuExpanded[1]) {
-            if (UIMenuExpanded[0]) collapseUIMenu(0);
-            expandUIMenu(1);
+        else if (styleButton2.material === materialSelected) {
+            confirmUIMenu(0, 1);
         }
-        else {
-            collapseUIMenu(1);
+        else if (styleButton3.material === materialSelected) {
+            confirmUIMenu(0, 2);
         }
-    }
-    else if (styleButton1.material === materialSelected) {
-        confirmUIMenu(0, 0);
-    }
-    else if (styleButton2.material === materialSelected) {
-        confirmUIMenu(0, 1);
-    }
-    else if (styleButton3.material === materialSelected) {
-        confirmUIMenu(0, 2);
-    }
-    else if (styleButton4.material === materialSelected) {
-        confirmUIMenu(0, 3);
-    }
-    else if (fontButton1.material === materialSelected) {
-        confirmUIMenu(1, 0);
-    }
-    else if (fontButton2.material === materialSelected) {
-        confirmUIMenu(1, 1);
-    }
-    else if (fontButton3.material === materialSelected) {
-        confirmUIMenu(1, 2);
-    }
-    else if (fontButton4.material === materialSelected) {
-        confirmUIMenu(1, 3);
-    }
-    else if (fontButton5.material === materialSelected) {
-        confirmUIMenu(1, 4);
-    }
-    else if (fontButton6.material === materialSelected) {
-        confirmUIMenu(1, 5);
+        else if (styleButton4.material === materialSelected) {
+            confirmUIMenu(0, 3);
+        }
+        else if (fontButton1.material === materialSelected) {
+            confirmUIMenu(1, 0);
+        }
+        else if (fontButton2.material === materialSelected) {
+            confirmUIMenu(1, 1);
+        }
+        else if (fontButton3.material === materialSelected) {
+            confirmUIMenu(1, 2);
+        }
+        else if (fontButton4.material === materialSelected) {
+            confirmUIMenu(1, 3);
+        }
+        else if (fontButton5.material === materialSelected) {
+            confirmUIMenu(1, 4);
+        }
+        else if (fontButton6.material === materialSelected) {
+            confirmUIMenu(1, 5);
+        }
     }
 }
 
 function onZoom(event) {
-    console.log('Zoom event');
     if (wheelMovementEnabled && mainNumber.generatingCubeDone) {
         if (currentState === states[2]) {
             if (event.deltaY < 0 && currentCamPosIndex < desiredCamPositions1To2.length - 1) {
                 currentCamPosIndex += 1;
                 goingBackEnabled = true;
-
-                cameraAnimationDispatcher(camera.position, desiredCamPositions1To2[currentCamPosIndex], camera.quaternion, desiredCamOrientations1To2[currentCamPosIndex], 0.1);
-                wheelMovementEnabled = false;
 
                 // scene.remove(spotLight0);
                 // scene.remove(spotLightEffect);
@@ -1899,11 +2141,15 @@ function onZoom(event) {
                 spotLight0.castShadow = false;
                 spotLightEffect.intensity = 0;
                 spotLightEffect.castShadow = false;
+
+                cameraAnimationDispatcher(camera.position, desiredCamPositions1To2[currentCamPosIndex], camera.quaternion, desiredCamOrientations1To2[currentCamPosIndex], 1);
+                wheelMovementEnabled = false;
+
             }
             else if (event.deltaY > 0 && currentCamPosIndex > 0) {
                 currentCamPosIndex -= 1;
 
-                cameraAnimationDispatcher(camera.position, desiredCamPositions1To2[currentCamPosIndex], camera.quaternion, desiredCamOrientations1To2[currentCamPosIndex], 0.1);
+                cameraAnimationDispatcher(camera.position, desiredCamPositions1To2[currentCamPosIndex], camera.quaternion, desiredCamOrientations1To2[currentCamPosIndex], 1);
                 wheelMovementEnabled = false;
             }
         }
@@ -1932,13 +2178,6 @@ function onZoom(event) {
                 goingBackEnabled = true;
                 wheelMovementEnabled = false;
 
-                if (currentCamPosIndex <= 2) {
-                    cameraAnimationDispatcher(camera.position, desiredCamPositions2To3[currentCamPosIndex], camera.quaternion, desiredCamOrientations2To3[currentCamPosIndex], 0.14);
-                }
-                else {
-                    cameraAnimationDispatcher(camera.position, desiredCamPositions2To3[currentCamPosIndex], camera.quaternion, desiredCamOrientations2To3[currentCamPosIndex], 0.1);
-                }
-
                 // scene.remove(groundSpotLight1);
                 // scene.remove(groundLightEffect);
                 groundSpotLight1.intensity = 0;
@@ -1946,13 +2185,20 @@ function onZoom(event) {
                 groundLight1Effect.intensity = 0;
 
                 mainNumber.instancedMesh.castShadow = false;
+
+                if (currentCamPosIndex <= 2) {
+                    cameraAnimationDispatcher(camera.position, desiredCamPositions2To3[currentCamPosIndex], camera.quaternion, desiredCamOrientations2To3[currentCamPosIndex], 1.4);
+                }
+                else {
+                    cameraAnimationDispatcher(camera.position, desiredCamPositions2To3[currentCamPosIndex], camera.quaternion, desiredCamOrientations2To3[currentCamPosIndex], 1);
+                }
             }
             else if (event.deltaY > 0 && currentCamPosIndex > 0) {
                 if (currentCamPosIndex === 2) {
                     mainNumber.updateNumberMeshPos(scene, new THREE.Vector3(roomPositions[1].x, roomPositions[1].y, roomPositions[1].z));
                     scene.add(mainNumber.instancedMesh);
                 }
-                if (currentCamPosIndex === 3) {
+                else if (currentCamPosIndex === 3) {
                     ceilingLightsOffEnabled = true;
                 }
                 else if (currentCamPosIndex === desiredCamPositions2To3.length - 2) {
@@ -1970,10 +2216,10 @@ function onZoom(event) {
 
                 currentCamPosIndex -= 1;
                 if (currentCamPosIndex <= 1) {
-                    cameraAnimationDispatcher(camera.position, desiredCamPositions2To3[currentCamPosIndex], camera.quaternion, desiredCamOrientations2To3[currentCamPosIndex], 0.14);
+                    cameraAnimationDispatcher(camera.position, desiredCamPositions2To3[currentCamPosIndex], camera.quaternion, desiredCamOrientations2To3[currentCamPosIndex], 1.4);
                 }
                 else {
-                    cameraAnimationDispatcher(camera.position, desiredCamPositions2To3[currentCamPosIndex], camera.quaternion, desiredCamOrientations2To3[currentCamPosIndex], 0.1);
+                    cameraAnimationDispatcher(camera.position, desiredCamPositions2To3[currentCamPosIndex], camera.quaternion, desiredCamOrientations2To3[currentCamPosIndex], 1);
                 }
                 wheelMovementEnabled = false;
             }
@@ -2007,11 +2253,10 @@ function onZoom(event) {
                     scene.add(rampMesh);
                 }
                 else if (currentCamPosIndex === desiredCamPositions3To4.length - 3) {
-                    ceilingLight3.intensity = 50;
+                    ceilingLight3.intensity = 40;
                     ceilingLight3.castShadow = true;
 
                     ceilingLightsOnEnabled = true;
-
                 }
                 // else if (currentCamPosIndex === desiredCamPositions3To4.length - 3) {
                 //     ceilingLightsOffEnabled = true;
@@ -2020,8 +2265,6 @@ function onZoom(event) {
                 currentCamPosIndex += 1;
                 goingBackEnabled = true;
                 wheelMovementEnabled = false;
-
-                cameraAnimationDispatcher(camera.position, desiredCamPositions3To4[currentCamPosIndex], camera.quaternion, desiredCamOrientations3To4[currentCamPosIndex], 1);
 
                 // scene.remove(groundSpotLight1);
                 // scene.remove(groundLightEffect);
@@ -2033,6 +2276,8 @@ function onZoom(event) {
                 groundLight2Effect.intensity = 0;
 
                 mainNumber.instancedMesh.castShadow = false;
+
+                cameraAnimationDispatcher(camera.position, desiredCamPositions3To4[currentCamPosIndex], camera.quaternion, desiredCamOrientations3To4[currentCamPosIndex], 1.2);
             }
             else if (event.deltaY > 0 && currentCamPosIndex > 0) {
                 if (currentCamPosIndex === 2) {
@@ -2057,7 +2302,7 @@ function onZoom(event) {
 
                 currentCamPosIndex -= 1;
 
-                cameraAnimationDispatcher(camera.position, desiredCamPositions3To4[currentCamPosIndex], camera.quaternion, desiredCamOrientations3To4[currentCamPosIndex], 1);
+                cameraAnimationDispatcher(camera.position, desiredCamPositions3To4[currentCamPosIndex], camera.quaternion, desiredCamOrientations3To4[currentCamPosIndex], 1.2);
 
                 wheelMovementEnabled = false;
             }
@@ -2065,17 +2310,26 @@ function onZoom(event) {
         else if (currentState === states[8]) {
             if (event.deltaY < 0 && currentCamPosIndex < desiredCamPositions4To5.length - 1) {
                 if (currentCamPosIndex === 2) {
+                    ceilingLightsOffEnabled = true;
+
                     mainNumber.updateNumberMeshPos(scene, new THREE.Vector3(roomPositions[4].x, roomPositions[4].y, roomPositions[4].z));
                 }
+                else if (currentCamPosIndex === 3) {
+                    ceilingLight1.intensity = 40;
+                    ceilingLight1.castShadow = true;
+
+                    ceilingLightsOnEnabled = true;
+                }
                 else if (currentCamPosIndex === desiredCamPositions4To5.length - 3) {
+                    releaseSTLMemory();
+                    generateVirtualArtifact();
+
                     ceilingLightsOffEnabled = true;
                 }
 
                 currentCamPosIndex += 1;
                 goingBackEnabled = true;
                 wheelMovementEnabled = false;
-
-                cameraAnimationDispatcher(camera.position, desiredCamPositions4To5[currentCamPosIndex], camera.quaternion, desiredCamOrientations4To5[currentCamPosIndex], 1.4);
 
                 // scene.remove(groundSpotLight1);
                 // scene.remove(groundLightEffect);
@@ -2086,22 +2340,33 @@ function onZoom(event) {
                 groundSpotLight2.castShadow = false;
                 groundLight2Effect.intensity = 0;
 
-                mainNumber.instancedMesh.castShadow = false;
+                cameraAnimationDispatcher(camera.position, desiredCamPositions4To5[currentCamPosIndex], camera.quaternion, desiredCamOrientations4To5[currentCamPosIndex], 1.5);
+                // mainNumber.instancedMesh.castShadow = false;
             }
             else if (event.deltaY > 0 && currentCamPosIndex > 0) {
-                if (currentCamPosIndex === 2) {
-                    mainNumber.updateNumberMeshPos(scene, new THREE.Vector3(roomPositions[3].x, 2 + mainNumber.getCubeSideLength() / 2, roomPositions[3].z));
-                }
-                else if (currentCamPosIndex === desiredCamPositions4To5.length - 2) {
-                    ceilingLight3.intensity = 50;
+                if (currentCamPosIndex === 3) {
+                    ceilingLight3.intensity = 40;
                     ceilingLight3.castShadow = true;
 
                     ceilingLightsOnEnabled = true;
+
+                    mainNumber.updateNumberMeshPos(scene, new THREE.Vector3(roomPositions[3].x, 2 + mainNumber.getCubeSideLength() / 2, roomPositions[3].z));
+
+                }
+                else if (currentCamPosIndex === 4) {
+                    ceilingLightsOffEnabled = true;
+                }
+                else if (currentCamPosIndex === desiredCamPositions4To5.length - 2) {
+                    ceilingLight1.intensity = 40;
+                    ceilingLight1.castShadow = true;
+
+                    ceilingLightsOnEnabled = true;
+
                 }
 
                 currentCamPosIndex -= 1;
 
-                cameraAnimationDispatcher(camera.position, desiredCamPositions4To5[currentCamPosIndex], camera.quaternion, desiredCamOrientations4To5[currentCamPosIndex], 1.4);
+                cameraAnimationDispatcher(camera.position, desiredCamPositions4To5[currentCamPosIndex], camera.quaternion, desiredCamOrientations4To5[currentCamPosIndex], 1.5);
 
                 wheelMovementEnabled = false;
             }
@@ -2115,6 +2380,8 @@ function onZoom(event) {
  */
 
 function cameraAnimationDispatcher(startPos, targetPos, startOrientation, targetOrientation, duration) {
+    renderer.compile(scene, camera);
+
     cameraAnimationDuration = duration;
     startCamPosition.copy(startPos);
     startCamOrientation.copy(startOrientation);
@@ -2124,7 +2391,7 @@ function cameraAnimationDispatcher(startPos, targetPos, startOrientation, target
     orbitControls.enabled = false;
 
     cameraAnimation = true;
-    clock.start();
+    clockForCamera.start();
 }
 
 function initUI() {
@@ -2254,7 +2521,7 @@ function initUI() {
 
             fontLoader.load('/fonts/Avenir Book_Regular.json', function (font) {
                 fontAvenirBook = font;
-                UIContentGeometry1 = new THREE.TextGeometry(GUIOptions.numberStyle, {
+                UIContentGeometry1 = new THREE.TextGeometry(mainNumberOptions.numberStyle, {
                     font: font,
                     size: 0.24,
                     height: 0.12,
@@ -2285,7 +2552,7 @@ function initUI() {
                     styleTextMeshes[n].position.set(mainNumber.getNumberMeshPos().x + 10.3, mainNumber.getNumberMeshPos().y + 0.9, mainNumber.getNumberMeshPos().z + 0.1);
                 }
 
-                UIContentGeometry2 = new THREE.TextGeometry(GUIOptions.numberFont, {
+                UIContentGeometry2 = new THREE.TextGeometry(mainNumberOptions.numberFont, {
                     font: font,
                     size: 0.24,
                     height: 0.12,
@@ -2558,7 +2825,7 @@ function confirmUIMenu(index, buttonIndex) {
         styleTextMesh.position.set(mainNumber.getNumberMeshPos().x + 10.3, mainNumber.getNumberMeshPos().y + 0.9, mainNumber.getNumberMeshPos().z + 0.1);
         scene.add(styleTextMesh);
 
-        GUIOptions.numberStyle = styleOptions[buttonIndex];
+        mainNumberOptions.numberStyle = styleOptions[buttonIndex];
         numberMeshCallback();
 
         collapseUIMenu(index);
@@ -2581,7 +2848,7 @@ function confirmUIMenu(index, buttonIndex) {
         fontTextMesh.position.set(mainNumber.getNumberMeshPos().x + 10.3, mainNumber.getNumberMeshPos().y - 0.4, mainNumber.getNumberMeshPos().z + 0.1);
         scene.add(fontTextMesh);
 
-        GUIOptions.numberFont = fontOptions[buttonIndex];
+        mainNumberOptions.numberFont = fontOptions[buttonIndex];
         numberMeshCallback();
 
         collapseUIMenu(index);
@@ -2876,8 +3143,8 @@ function generateImageSide(image) {
     let majorityDarkColor;
     let totalColor = 0;
     let sampleCount = 0;
-    for (let i = 0; i < image.width; i += Math.round(image.width / 20)) {
-        for (let j = 0; j < image.height; j += Math.round(image.height / 20)) {
+    for (let i = 0; i < image.width; i++) {
+        for (let j = 0; j < image.height; j++) {
             totalColor += getImagePixelColor(imageData, i, j);
             sampleCount++;
         }
@@ -2903,13 +3170,13 @@ function generateImageSide(image) {
 
             let color = (getImagePixelColor(imageData, xPos0, yPos0) + getImagePixelColor(imageData, xPos0, yPos1) + getImagePixelColor(imageData, xPos1, yPos1) + getImagePixelColor(imageData, xPos1, yPos0)) / 4;
             if (majorityDarkColor) {
-                if (color < ((averageColor + 382) / 2)) {
+                if (color < (averageColor + 382) / 2) {
                     newCubePositions.push(mainNumber.cubePositions[i]);
                     cubeCount++;
                 }
             }
             else {
-                if (color > ((averageColor + 382) / 2)) {
+                if (color > (averageColor + 382) / 2) {
                     newCubePositions.push(mainNumber.cubePositions[i]);
                     cubeCount++;
                 }
@@ -2973,13 +3240,12 @@ function getImagePixelColor(imageData, x, y) {
     // return { r: data[position], g: data[position + 1], b: data[position + 2], a: data[position + 3] };
     if (data[position + 2] > (data[position] + data[position + 1]) * 2) {
         // Oversaturated sky
-        return ((data[position] + data[position + 1] + data[position + 2]) * 3);
+        return ((data[position] + data[position + 1] + data[position + 2]) * 4);
     }
     else {
         return (data[position] + data[position + 1] + data[position + 2]);
     }
 }
-
 
 // 3D Printing
 
@@ -3031,6 +3297,7 @@ function generateMergedFinalGeometry() {
                     finalInstancedMesh.getMatrixAt(i, newMatrix);
                     finalGeometries.push(unitCubeGeometry.clone().applyMatrix4(newMatrix));
                 }
+
                 if (j === 0) {
                     mergedFinalGeometry = mergeBufferGeometries(finalGeometries);
                     finalGeometries.length = 0;
@@ -3051,16 +3318,13 @@ function generateMergedFinalGeometry() {
                 resolve(true);
             }
             j++;
-        }, 50);
+        }, 100);
     });
 }
 
-function releaseSTLMemory() {
-    link = document.createElement('a');
-    link.style.display = 'none';
-
-    mergedFinalGeometry = null;
-    mergedFinalMesh = null;
+function releaseInstancedMeshMemeory() {
+    scene.remove(mainNumber.instancedMesh);
+    mainNumber.instancedMesh = null;
 }
 
 function addLoadingOverlay() {
@@ -3071,4 +3335,46 @@ function addLoadingOverlay() {
 
     loadingOverlay.visible = false;
     camera.add(loadingOverlay);
+}
+
+function releaseSTLMemory() {
+    link = null;
+    mergedFinalMesh = null;
+}
+
+// Virtual artifact
+
+let virtualArtifactMesh;
+let virtualArtifactGenerated = false;
+
+function generateVirtualArtifact() {
+    if (!virtualArtifactGenerated) {
+        document.body.style.background = "rgb(80, 80, 80)";
+
+        virtualArtifactMesh = new THREE.Mesh(mergedFinalGeometry, noiseMaterial);
+        virtualArtifactMesh.position.set(roomPositions[4].x, roomPositions[4].y, roomPositions[4].z);
+        virtualArtifactMesh.setRotationFromEuler(new THREE.Euler(0, degreesToRadians(180), 0, 'XYZ'));
+        scene.add(virtualArtifactMesh);
+
+        virtualArtifactGenerated = true;
+    }
+}
+
+function addGUI() {
+
+    const gui = new dat.GUI({ width: 330 });
+
+    gui.addColor(noiseOptions, 'depthColor').onChange(() => { noiseMaterial.uniforms.uDepthColor.value.set(noiseOptions.depthColor) });
+    gui.addColor(noiseOptions, 'surfaceColor').onChange(() => { noiseMaterial.uniforms.uSurfaceColor.value.set(noiseOptions.surfaceColor) });
+
+    gui.add(noiseMaterial.uniforms.uBigWavesElevation, 'value').min(0).max(0.2).step(0.001).name('uBigWavesElevation');
+    gui.add(noiseMaterial.uniforms.uBigWavesFrequency.value, 'x').min(0).max(5).step(0.001).name('uBigWavesFrequencyX');
+    gui.add(noiseMaterial.uniforms.uBigWavesFrequency.value, 'y').min(0).max(5).step(0.001).name('uBigWavesFrequencyY');
+    gui.add(noiseMaterial.uniforms.uBigWavesSpeed, 'value').min(0).max(4).step(0.001).name('uBigWavesSpeed');
+    gui.add(noiseMaterial.uniforms.uSmallWavesElevation, 'value').min(0).max(0.4).step(0.001).name('uSmallWavesElevation');
+    gui.add(noiseMaterial.uniforms.uSmallWavesFrequency, 'value').min(0).max(10).step(0.001).name('uSmallWavesFrequency');
+    gui.add(noiseMaterial.uniforms.uSmallWavesSpeed, 'value').min(0).max(1).step(0.001).name('uSmallWavesSpeed');
+    gui.add(noiseMaterial.uniforms.uSmallIterations, 'value').min(0).max(5).step(1).name('uSmallIterations');
+    gui.add(noiseMaterial.uniforms.uColorOffset, 'value').min(0).max(0.5).step(0.001).name('uColorOffset');
+    gui.add(noiseMaterial.uniforms.uColorMultiplier, 'value').min(0).max(10).step(0.001).name('uColorMultiplier');
 }
