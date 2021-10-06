@@ -20,6 +20,9 @@ import noiseFragmentShader from './shaders/Perlin_noise/fragment.glsl'
  */
 
 // Window sizes
+
+let renderQuality = 2;
+
 const sizes = {
     width: window.innerWidth,
     height: window.innerHeight
@@ -36,7 +39,16 @@ window.addEventListener('resize', () => {
 
     // Update renderer
     renderer.setSize(sizes.width, sizes.height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    if (renderQuality === 0) {
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
+    }
+    else if (renderQuality === 1) {
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    }
+    else if (renderQuality === 2) {
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    }
 
     requestRenderIfNotRequested('resize event');
 });
@@ -71,8 +83,6 @@ let mainNumberOptions = {
 };
 
 let devMode;
-
-let shadowQuality = 2;
 
 // const testingControl = gui.addFolder('Testing');
 // testingControl.add(GUIOptions, 'devMode').name('Dev Mode').onChange(devModeCallback);
@@ -534,17 +544,11 @@ let materialAnimation = false;
 /**
  * Renderer
  */
-const renderer = new THREE.WebGLRenderer({
-    canvas: canvas,
-    alpha: true,
-    antialias: false,
-    powerPreference: "high-performance"
-})
 
+let renderer;
 
 // const rendererControl = gui.addFolder("Renderer Properties");
 // rendererControl.add(renderer, 'toneMappingExposure').min(0).max(2).step(0.01).onChange(requestRenderIfNotRequested);
-
 
 const updateAllMaterials = () => {
     scene.traverse((child) => {
@@ -569,22 +573,34 @@ const groundSpotLight2 = new THREE.SpotLight(0xFFFFFF, 200, 100, Math.PI / 17, 0
 const groundLight2Effect = new THREE.PointLight(0xFFFFFF, 20, 5);
 
 function initLightsAndShadows() {
+    let aaEnabled = false;
+    if (renderQuality === 2) aaEnabled = true;
+
+    renderer = new THREE.WebGLRenderer({
+        canvas: canvas,
+        alpha: true,
+        antialias: aaEnabled,
+        powerPreference: "high-performance"
+    });
+
     renderer.setSize(sizes.width, sizes.height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.physicallyCorrectLights = true;
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1;
     renderer.shadowMap.enabled = true;
 
-    if (shadowQuality === 0) {
+    if (renderQuality === 0) {
         renderer.shadowMap.type = THREE.BasicShadowMap;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
     }
-    else if (shadowQuality === 1) {
+    else if (renderQuality === 1) {
         renderer.shadowMap.type = THREE.PCFShadowMap;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     }
-    else if (shadowQuality === 2) {
+    else if (renderQuality === 2) {
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     }
 
     ceilingLight0.position.set(ceilingLightPositions[0].x, ceilingLightPositions[0].y - 1.5, ceilingLightPositions[0].z);
@@ -684,7 +700,7 @@ async function init() {
     document.body.removeChild(initUIText2);
     document.body.removeChild(initUIText3);
     document.body.removeChild(numberInputField);
-    document.body.removeChild(startButton);
+    document.body.removeChild(buttonHolder);
 
     loadingBarElement0.style.transform = `scaleX(${0.1})`;
 
@@ -1854,19 +1870,19 @@ qualitySelectorSlider.oninput = function () {
     if (this.value == 1) {
         initUIText2.innerHTML = 'Low';
         mainNumberOptions.qualityScalar = 0.625;
-        shadowQuality = 0;
+        renderQuality = 0;
         shadowMapSizeScalar = 0.5;
     }
     else if (this.value == 2) {
         initUIText2.innerHTML = 'Medium';
         mainNumberOptions.qualityScalar = 0.78125;
-        shadowQuality = 1;
+        renderQuality = 1;
         shadowMapSizeScalar = 0.75;
     }
     else if (this.value == 3) {
         initUIText2.innerHTML = 'High';
         mainNumberOptions.qualityScalar = 1;
-        shadowQuality = 2;
+        renderQuality = 2;
         shadowMapSizeScalar = 1;
     }
 }
@@ -1882,17 +1898,28 @@ initUIText2.style.top = '62%';
 initUIText2.style.left = '25%';
 initUIText2.style.position = 'absolute';
 
+let buttonHolder = document.createElement("div");
+buttonHolder.style.width = '100%';
+buttonHolder.style.height = '30%';
+buttonHolder.style.margin = 'auto';
+buttonHolder.style.textAlign = 'center';
+buttonHolder.style.bottom = '0';
+buttonHolder.style.position = 'absolute';
+
 let startButton = document.createElement("button");
 startButton.innerHTML = "START";
 startButton.style.textAlign = 'center';
-startButton.style.top = '70%';
-startButton.style.left = '48%';
-startButton.style.position = 'absolute';
-startButton.style.borderRadius = '12px';
+startButton.style.margin = 'auto';
+// startButton.style.marginTop = '50%';
+// startButton.style.marginBottom = '50%';
+// startButton.style.marginLeft = 'auto';
+// startButton.style.marginRight = 'auto';
+
+startButton.style.borderRadius = '8px';
 startButton.style.padding = '8px 12px';
 startButton.style.color = 'black';
 startButton.style.backgroundColor = '#e7e7e7';
-startButton.style.fontSize = '16px';
+startButton.style.fontSize = '100%';
 
 startButton.addEventListener("click", function () {
 
@@ -1913,7 +1940,8 @@ document.body.appendChild(initUIText1);
 document.body.appendChild(initUIText2);
 document.body.appendChild(initUIText3);
 document.body.appendChild(numberInputField);
-document.body.appendChild(startButton);
+buttonHolder.appendChild(startButton);
+document.body.appendChild(buttonHolder);
 
 
 /**
