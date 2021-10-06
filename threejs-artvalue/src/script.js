@@ -72,6 +72,8 @@ let mainNumberOptions = {
 
 let devMode;
 
+let shadowQuality = 2;
+
 // const testingControl = gui.addFolder('Testing');
 // testingControl.add(GUIOptions, 'devMode').name('Dev Mode').onChange(devModeCallback);
 // testingControl.open();
@@ -435,13 +437,18 @@ scene.add(ambientLight);
 
 let shadowMapSizeScalar = 1;
 
-const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 5.0);
-directionalLight.castShadow = true;
-directionalLight.shadow.mapSize.width = 2048 * shadowMapSizeScalar;
-directionalLight.shadow.mapSize.height = 2048 * shadowMapSizeScalar;
-directionalLight.shadow.camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.5, 100);
-directionalLight.shadow.normalBias = 0.1;
-directionalLight.shadow.bias = 0.0001;
+let groundLight1;
+let groundLight2;
+
+const spotlightTargetObject = new THREE.Object3D();
+
+// const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 5.0);
+// directionalLight.castShadow = true;
+// directionalLight.shadow.mapSize.width = 2048 * shadowMapSizeScalar;
+// directionalLight.shadow.mapSize.height = 2048 * shadowMapSizeScalar;
+// directionalLight.shadow.camera = new THREE.OrthographicCamera(-10, 10, 10, -10, 0.5, 100);
+// directionalLight.shadow.normalBias = 0.1;
+// directionalLight.shadow.bias = 0.0001;
 
 // const directionalLightControl = gui.addFolder("Directional Light");
 // directionalLightControl.add(directionalLight.position, 'x').min(0).max(50).step(0.01).listen();
@@ -450,124 +457,23 @@ directionalLight.shadow.bias = 0.0001;
 // directionalLightControl.add(directionalLight, 'intensity').min(0).max(10).step(0.01).listen();
 // directionalLightControl.add(GUIOptions, 'lightHelperFlag').name('Light Helper').onChange(directionalLightHelperCallback);
 
-const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 2, new THREE.Color('yellow'));
-directionalLightHelper.name = 'lightHelper';
+// const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 2, new THREE.Color('yellow'));
+// directionalLightHelper.name = 'lightHelper';
 
 // const directionalLightCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera);
 // scene.add(directionalLightCameraHelper);
 
-function directionalLightHelperCallback() {
-    if (mainNumberOptions.lightHelperFlag && !mainNumberOptions.lightHelperEnabled) {
-        scene.add(directionalLightHelper);
-        mainNumberOptions.lightHelperEnabled = true;
-    }
-    else if (!mainNumberOptions.lightHelperFlag && mainNumberOptions.lightHelperEnabled) {
-        scene.remove(scene.getObjectByName('lightHelper'));
-        mainNumberOptions.lightHelperEnabled = false;
-    }
-    requestRenderIfNotRequested('lightHelperCallback');
-}
-
-const ceilingLight0 = new THREE.PointLight(0xFFFFFF, 40, 150);
-ceilingLight0.position.set(ceilingLightPositions[0].x, ceilingLightPositions[0].y - 1.5, ceilingLightPositions[0].z);
-ceilingLight0.castShadow = true;
-ceilingLight0.shadow.mapSize.width = 2048 * shadowMapSizeScalar;
-ceilingLight0.shadow.mapSize.height = 2048 * shadowMapSizeScalar;
-ceilingLight0.shadow.normalBias = 0.1;
-ceilingLight0.shadow.bias = 0.0001;
-scene.add(ceilingLight0);
-
-const ceilingLight1 = new THREE.PointLight(0xFFFFFF, 40, 150);
-ceilingLight1.position.set(ceilingLightPositions[1].x, ceilingLightPositions[1].y - 1.5, ceilingLightPositions[1].z);
-ceilingLight1.castShadow = true;
-ceilingLight1.shadow.mapSize.width = 2048 * shadowMapSizeScalar;
-ceilingLight1.shadow.mapSize.height = 2048 * shadowMapSizeScalar;
-ceilingLight1.shadow.normalBias = 0.1;
-ceilingLight1.shadow.bias = 0.0001;
-scene.add(ceilingLight1);
-
-const ceilingLight2 = new THREE.PointLight(0xFFFFFF, 40, 150);
-ceilingLight2.position.set(ceilingLightPositions[2].x, ceilingLightPositions[2].y - 1.5, ceilingLightPositions[2].z);
-ceilingLight2.castShadow = true;
-ceilingLight2.shadow.mapSize.width = 2048 * shadowMapSizeScalar;
-ceilingLight2.shadow.mapSize.height = 2048 * shadowMapSizeScalar;
-ceilingLight2.shadow.normalBias = 0.1;
-ceilingLight2.shadow.bias = 0.0001;
-scene.add(ceilingLight2);
-
-const ceilingLight3 = new THREE.PointLight(0xFFFFFF, 40, 150);
-ceilingLight3.position.set(ceilingLightPositions[3].x, ceilingLightPositions[3].y - 1.5, ceilingLightPositions[3].z);
-ceilingLight3.castShadow = true;
-ceilingLight3.shadow.mapSize.width = 2048 * shadowMapSizeScalar;
-ceilingLight3.shadow.mapSize.height = 2048 * shadowMapSizeScalar;
-ceilingLight3.shadow.normalBias = 0.1;
-ceilingLight3.shadow.bias = 0.0001;
-scene.add(ceilingLight3);
-
-const spotLight0 = new THREE.SpotLight(0xFFFFFF, 40, 100, Math.PI / 8, 0.2);
-spotLight0.position.set(spotlightPositions[0].x, spotlightPositions[0].y, spotlightPositions[0].z);
-spotLight0.castShadow = true;
-spotLight0.shadow.mapSize.width = 1024 * shadowMapSizeScalar;
-spotLight0.shadow.mapSize.height = 1024 * shadowMapSizeScalar;
-spotLight0.shadow.normalBias = 0.2;
-spotLight0.shadow.bias = 0.0001;
-
-spotLight0.intensity = 0;
-spotLight0.castShadow = false;
-scene.add(spotLight0);
-
-const spotLightEffect = new THREE.PointLight(0xFFFFFF, 10, 5);
-spotLightEffect.position.set(spotlightPositions[0].x, spotlightPositions[0].y, spotlightPositions[0].z);
-spotLightEffect.castShadow = true;
-spotLightEffect.shadow.mapSize.width = 512 * shadowMapSizeScalar;
-spotLightEffect.shadow.mapSize.height = 512 * shadowMapSizeScalar;
-spotLightEffect.shadow.normalBias = 0.1;
-spotLightEffect.shadow.bias = 0.0001;
-
-spotLightEffect.intensity = 0;
-spotLightEffect.castShadow = false;
-scene.add(spotLightEffect);
-
-const groundSpotLight1 = new THREE.SpotLight(0xFFFFFF, 200, 100, Math.PI / 17, 0.5, 0.1);
-groundSpotLight1.position.set(spotlightPositions[1].x, roomPositions[1].y, spotlightPositions[1].z - 2);
-groundSpotLight1.castShadow = true;
-groundSpotLight1.shadow.mapSize.width = 1024 * shadowMapSizeScalar;
-groundSpotLight1.shadow.mapSize.height = 1024 * shadowMapSizeScalar;
-groundSpotLight1.shadow.normalBias = 0.01;
-groundSpotLight1.shadow.bias = 0.0001;
-groundSpotLight1.shadow.camera = new THREE.OrthographicCamera(-8, 8, 8, -8, 30, 80);
-// const groundSpotLight1CameraHelper = new THREE.CameraHelper(groundSpotLight1.shadow.camera);
-// scene.add(groundSpotLight1CameraHelper);
-groundSpotLight1.intensity = 0;
-groundSpotLight1.castShadow = false;
-scene.add(groundSpotLight1);
-
-const groundLight1Effect = new THREE.PointLight(0xFFFFFF, 20, 5);
-groundLight1Effect.position.set(spotlightPositions[1].x, roomPositions[1].y - 1, spotlightPositions[1].z - 2);
-groundLight1Effect.intensity = 0;
-scene.add(groundLight1Effect);
-
-const groundSpotLight2 = new THREE.SpotLight(0xFFFFFF, 200, 100, Math.PI / 17, 0.5, 0.1);
-groundSpotLight2.position.set(spotlightPositions[3].x, roomPositions[2].y, spotlightPositions[3].z - 2);
-groundSpotLight2.castShadow = true;
-groundSpotLight2.shadow.mapSize.width = 1024 * shadowMapSizeScalar;
-groundSpotLight2.shadow.mapSize.height = 1024 * shadowMapSizeScalar;
-groundSpotLight2.shadow.normalBias = 0.01;
-groundSpotLight2.shadow.bias = 0.0001;
-groundSpotLight2.shadow.camera = new THREE.OrthographicCamera(-8, 8, 8, -8, 30, 80);
-groundSpotLight2.intensity = 0;
-groundSpotLight2.castShadow = false;
-scene.add(groundSpotLight2);
-
-const groundLight2Effect = new THREE.PointLight(0xFFFFFF, 20, 5);
-groundLight2Effect.position.set(spotlightPositions[3].x, roomPositions[2].y - 1, spotlightPositions[3].z - 2);
-groundLight2Effect.intensity = 0;
-scene.add(groundLight2Effect);
-
-let groundLight1;
-let groundLight2;
-
-const spotlightTargetObject = new THREE.Object3D();
+// function directionalLightHelperCallback() {
+//     if (mainNumberOptions.lightHelperFlag && !mainNumberOptions.lightHelperEnabled) {
+//         scene.add(directionalLightHelper);
+//         mainNumberOptions.lightHelperEnabled = true;
+//     }
+//     else if (!mainNumberOptions.lightHelperFlag && mainNumberOptions.lightHelperEnabled) {
+//         scene.remove(scene.getObjectByName('lightHelper'));
+//         mainNumberOptions.lightHelperEnabled = false;
+//     }
+//     requestRenderIfNotRequested('lightHelperCallback');
+// }
 
 // testingMesh.position.set(spotlightPositions[1].x, roomPositions[1].y - 1, spotlightPositions[1].z - 2)
 // scene.add(testingMesh);
@@ -635,22 +541,11 @@ const renderer = new THREE.WebGLRenderer({
     powerPreference: "high-performance"
 })
 
-renderer.setSize(sizes.width, sizes.height);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.physicallyCorrectLights = true;
-renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1;
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 // const rendererControl = gui.addFolder("Renderer Properties");
 // rendererControl.add(renderer, 'toneMappingExposure').min(0).max(2).step(0.01).onChange(requestRenderIfNotRequested);
 
 
-/**
- * Update all materials
- */
 const updateAllMaterials = () => {
     scene.traverse((child) => {
         if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
@@ -662,10 +557,126 @@ const updateAllMaterials = () => {
     });
 }
 
+const ceilingLight0 = new THREE.PointLight(0xFFFFFF, 40, 150);
+const ceilingLight1 = new THREE.PointLight(0xFFFFFF, 40, 150);
+const ceilingLight2 = new THREE.PointLight(0xFFFFFF, 40, 150);
+const ceilingLight3 = new THREE.PointLight(0xFFFFFF, 40, 150);
+const spotLight0 = new THREE.SpotLight(0xFFFFFF, 40, 100, Math.PI / 8, 0.2);
+const spotLightEffect = new THREE.PointLight(0xFFFFFF, 10, 5);
+const groundSpotLight1 = new THREE.SpotLight(0xFFFFFF, 200, 100, Math.PI / 17, 0.5, 0.1);
+const groundLight1Effect = new THREE.PointLight(0xFFFFFF, 20, 5);
+const groundSpotLight2 = new THREE.SpotLight(0xFFFFFF, 200, 100, Math.PI / 17, 0.5, 0.1);
+const groundLight2Effect = new THREE.PointLight(0xFFFFFF, 20, 5);
+
+function initLightsAndShadows() {
+    renderer.setSize(sizes.width, sizes.height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.physicallyCorrectLights = true;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1;
+    renderer.shadowMap.enabled = true;
+
+    if (shadowQuality === 0) {
+        renderer.shadowMap.type = THREE.BasicShadowMap;
+    }
+    else if (shadowQuality === 1) {
+        renderer.shadowMap.type = THREE.PCFShadowMap;
+    }
+    else if (shadowQuality === 2) {
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
+
+    ceilingLight0.position.set(ceilingLightPositions[0].x, ceilingLightPositions[0].y - 1.5, ceilingLightPositions[0].z);
+    ceilingLight0.castShadow = true;
+    ceilingLight0.shadow.mapSize.width = Math.round(2048 * shadowMapSizeScalar);
+    ceilingLight0.shadow.mapSize.height = Math.round(2048 * shadowMapSizeScalar);
+    ceilingLight0.shadow.normalBias = 0.1;
+    ceilingLight0.shadow.bias = 0.0001;
+    scene.add(ceilingLight0);
+
+    ceilingLight1.position.set(ceilingLightPositions[1].x, ceilingLightPositions[1].y - 1.5, ceilingLightPositions[1].z);
+    ceilingLight1.castShadow = true;
+    ceilingLight1.shadow.mapSize.width = Math.round(2048 * shadowMapSizeScalar);
+    ceilingLight1.shadow.mapSize.height = Math.round(2048 * shadowMapSizeScalar);
+    ceilingLight1.shadow.normalBias = 0.1;
+    ceilingLight1.shadow.bias = 0.0001;
+    scene.add(ceilingLight1);
+
+    ceilingLight2.position.set(ceilingLightPositions[2].x, ceilingLightPositions[2].y - 1.5, ceilingLightPositions[2].z);
+    ceilingLight2.castShadow = true;
+    ceilingLight2.shadow.mapSize.width = Math.round(2048 * shadowMapSizeScalar);
+    ceilingLight2.shadow.mapSize.height = Math.round(2048 * shadowMapSizeScalar);
+    ceilingLight2.shadow.normalBias = 0.1;
+    ceilingLight2.shadow.bias = 0.0001;
+    scene.add(ceilingLight2);
+
+    ceilingLight3.position.set(ceilingLightPositions[3].x, ceilingLightPositions[3].y - 1.5, ceilingLightPositions[3].z);
+    ceilingLight3.castShadow = true;
+    ceilingLight3.shadow.mapSize.width = Math.round(2048 * shadowMapSizeScalar);
+    ceilingLight3.shadow.mapSize.height = Math.round(2048 * shadowMapSizeScalar);
+    ceilingLight3.shadow.normalBias = 0.1;
+    ceilingLight3.shadow.bias = 0.0001;
+    scene.add(ceilingLight3);
+
+    spotLight0.position.set(spotlightPositions[0].x, spotlightPositions[0].y, spotlightPositions[0].z);
+    spotLight0.castShadow = true;
+    spotLight0.shadow.mapSize.width = Math.round(1024 * shadowMapSizeScalar);
+    spotLight0.shadow.mapSize.height = Math.round(1024 * shadowMapSizeScalar);
+    spotLight0.shadow.normalBias = 0.2;
+    spotLight0.shadow.bias = 0.0001;
+    spotLight0.intensity = 0;
+    spotLight0.castShadow = false;
+    scene.add(spotLight0);
+
+    spotLightEffect.position.set(spotlightPositions[0].x, spotlightPositions[0].y, spotlightPositions[0].z);
+    spotLightEffect.castShadow = true;
+    spotLightEffect.shadow.mapSize.width = Math.round(512 * shadowMapSizeScalar);
+    spotLightEffect.shadow.mapSize.height = Math.round(512 * shadowMapSizeScalar);
+    spotLightEffect.shadow.normalBias = 0.1;
+    spotLightEffect.shadow.bias = 0.0001;
+
+    spotLightEffect.intensity = 0;
+    spotLightEffect.castShadow = false;
+    scene.add(spotLightEffect);
+
+    groundSpotLight1.position.set(spotlightPositions[1].x, roomPositions[1].y, spotlightPositions[1].z - 2);
+    groundSpotLight1.castShadow = true;
+    groundSpotLight1.shadow.mapSize.width = Math.round(1024 * shadowMapSizeScalar);
+    groundSpotLight1.shadow.mapSize.height = Math.round(1024 * shadowMapSizeScalar);
+    groundSpotLight1.shadow.normalBias = 0.01;
+    groundSpotLight1.shadow.bias = 0.0001;
+    groundSpotLight1.shadow.camera = new THREE.OrthographicCamera(-8, 8, 8, -8, 30, 80);
+    groundSpotLight1.intensity = 0;
+    groundSpotLight1.castShadow = false;
+    scene.add(groundSpotLight1);
+
+    groundLight1Effect.position.set(spotlightPositions[1].x, roomPositions[1].y - 1, spotlightPositions[1].z - 2);
+    groundLight1Effect.intensity = 0;
+    scene.add(groundLight1Effect);
+
+    groundSpotLight2.position.set(spotlightPositions[3].x, roomPositions[2].y, spotlightPositions[3].z - 2);
+    groundSpotLight2.castShadow = true;
+    groundSpotLight2.shadow.mapSize.width = Math.round(1024 * shadowMapSizeScalar);
+    groundSpotLight2.shadow.mapSize.height = Math.round(1024 * shadowMapSizeScalar);
+    groundSpotLight2.shadow.normalBias = 0.01;
+    groundSpotLight2.shadow.bias = 0.0001;
+    groundSpotLight2.shadow.camera = new THREE.OrthographicCamera(-8, 8, 8, -8, 30, 80);
+    groundSpotLight2.intensity = 0;
+    groundSpotLight2.castShadow = false;
+    scene.add(groundSpotLight2);
+
+    groundLight2Effect.position.set(spotlightPositions[3].x, roomPositions[2].y - 1, spotlightPositions[3].z - 2);
+    groundLight2Effect.intensity = 0;
+    scene.add(groundLight2Effect);
+}
+
 /**
  * Setting up the main scene
  */
 async function init() {
+
+    initLightsAndShadows();
 
     qualitySelectorSlider.remove();
     document.body.removeChild(initUIText0);
@@ -832,6 +843,8 @@ async function init() {
     }
 }
 
+
+
 // FRONT view
 // const numberControl = gui.addFolder("Number Control");
 // numberControl.add(GUIOptions, 'numberValue').name('Value').onFinishChange(numberMeshCallback);
@@ -856,7 +869,7 @@ async function numberMeshCallback() {
 
 function enterNewState() {
 
-    scene.remove(directionalLight);
+    // scene.remove(directionalLight);
 
     console.log("New state: " + currentState);
 
@@ -1663,7 +1676,7 @@ const tick = () => {
 
                 addGUI();
 
-                materialAnimation = true;    
+                materialAnimation = true;
                 clockForShader.start();
 
                 leftClickIcon.visible = true;
@@ -1841,14 +1854,20 @@ qualitySelectorSlider.oninput = function () {
     if (this.value == 1) {
         initUIText2.innerHTML = 'Low';
         mainNumberOptions.qualityScalar = 0.625;
+        shadowQuality = 0;
+        shadowMapSizeScalar = 0.5;
     }
     else if (this.value == 2) {
         initUIText2.innerHTML = 'Medium';
         mainNumberOptions.qualityScalar = 0.78125;
+        shadowQuality = 1;
+        shadowMapSizeScalar = 0.75;
     }
     else if (this.value == 3) {
         initUIText2.innerHTML = 'High';
         mainNumberOptions.qualityScalar = 1;
+        shadowQuality = 2;
+        shadowMapSizeScalar = 1;
     }
 }
 
