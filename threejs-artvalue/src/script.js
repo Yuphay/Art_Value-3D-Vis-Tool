@@ -2505,7 +2505,7 @@ function initUI() {
             UIInstructionMesh4.position.set(mainNumber.getNumberMeshPos().x, mainNumber.getNumberMeshPos().y + 0.8, mainNumber.getNumberMeshPos().z);
             scene.add(UIInstructionMesh4);
 
-            UITitleGeometry5 = new THREE.TextGeometry('Art_Value Gallery!', {
+            UITitleGeometry5 = new THREE.TextGeometry('Art Value Experience!', {
                 font: font,
                 size: 0.8,
                 height: 1,
