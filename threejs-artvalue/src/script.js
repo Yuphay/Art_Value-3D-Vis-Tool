@@ -82,21 +82,24 @@ let mainNumberOptions = {
     qualityScalar: 1
 };
 
-let devMode;
+let devMode = mainNumberOptions.devMode;
 
 // const testingControl = gui.addFolder('Testing');
-// testingControl.add(GUIOptions, 'devMode').name('Dev Mode').onChange(devModeCallback);
+// testingControl.add(GUIOptions, 'devMode').name('Dev Mode').onChange(toggleStatsWindow);
 // testingControl.open();
 
-function devModeCallback() {
-    devMode = mainNumberOptions.devMode;
-    if (devMode === true) {
+let statsWindowOn = false;
+
+function toggleStatsWindow() {
+    if (statsWindowOn === false) {
         document.body.appendChild(stats.domElement);
+        statsWindowOn = true;
     }
     else {
         document.body.removeChild(stats.domElement);
+        statsWindowOn = false;
     }
-    requestRenderIfNotRequested('devModeCallback');
+    requestRenderIfNotRequested('toggleStatsWindow');
 }
 
 let stats = new Stats();
@@ -105,7 +108,7 @@ stats.domElement.style.position = 'absolute';
 stats.domElement.style.left = '0';
 stats.domElement.style.top = '0';
 
-document.body.appendChild(stats.domElement);
+// document.body.appendChild(stats.domElement);
 
 // State Control
 const states = ['None', 'Room 1', '1 to 2', 'Room 2', '2 to 3', 'Room 3', '3 to 4', 'Room 4', '4 to 5', 'Room 5'];
@@ -1982,6 +1985,13 @@ function onMouseMove(event) {
 
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+    if ((mouse.x < -0.9 && mouse.y > 0.9) && statsWindowOn === false){
+        toggleStatsWindow();
+    }
+    else if (!(mouse.x < -0.9 && mouse.y > 0.9) && statsWindowOn === true){
+        toggleStatsWindow();
+    }
 }
 
 function onClick(event) {
@@ -3434,17 +3444,17 @@ function addGUI() {
 
     const gui = new dat.GUI({ width: 330 });
 
-    gui.addColor(noiseOptions, 'depthColor').onChange(() => { noiseMaterial.uniforms.uDepthColor.value.set(noiseOptions.depthColor) });
-    gui.addColor(noiseOptions, 'surfaceColor').onChange(() => { noiseMaterial.uniforms.uSurfaceColor.value.set(noiseOptions.surfaceColor) });
+    gui.addColor(noiseOptions, 'depthColor').name('Depth Color').onChange(() => { noiseMaterial.uniforms.uDepthColor.value.set(noiseOptions.depthColor) });
+    gui.addColor(noiseOptions, 'surfaceColor').name('Surface Color').onChange(() => { noiseMaterial.uniforms.uSurfaceColor.value.set(noiseOptions.surfaceColor) });
 
-    gui.add(noiseMaterial.uniforms.uBigWavesElevation, 'value').min(0).max(0.2).step(0.001).name('uBigWavesElevation');
-    gui.add(noiseMaterial.uniforms.uBigWavesFrequency.value, 'x').min(0).max(5).step(0.001).name('uBigWavesFrequencyX');
-    gui.add(noiseMaterial.uniforms.uBigWavesFrequency.value, 'y').min(0).max(5).step(0.001).name('uBigWavesFrequencyY');
-    gui.add(noiseMaterial.uniforms.uBigWavesSpeed, 'value').min(0).max(4).step(0.001).name('uBigWavesSpeed');
-    gui.add(noiseMaterial.uniforms.uSmallWavesElevation, 'value').min(0).max(0.4).step(0.001).name('uSmallWavesElevation');
-    gui.add(noiseMaterial.uniforms.uSmallWavesFrequency, 'value').min(0).max(10).step(0.001).name('uSmallWavesFrequency');
-    gui.add(noiseMaterial.uniforms.uSmallWavesSpeed, 'value').min(0).max(1).step(0.001).name('uSmallWavesSpeed');
-    gui.add(noiseMaterial.uniforms.uSmallIterations, 'value').min(0).max(5).step(1).name('uSmallIterations');
-    gui.add(noiseMaterial.uniforms.uColorOffset, 'value').min(0).max(0.5).step(0.001).name('uColorOffset');
-    gui.add(noiseMaterial.uniforms.uColorMultiplier, 'value').min(0).max(10).step(0.001).name('uColorMultiplier');
+    gui.add(noiseMaterial.uniforms.uBigWavesElevation, 'value').min(0).max(0.2).step(0.001).name('Big Waves Elevation');
+    gui.add(noiseMaterial.uniforms.uBigWavesFrequency.value, 'x').min(0).max(5).step(0.001).name('Big Waves Frequency X');
+    gui.add(noiseMaterial.uniforms.uBigWavesFrequency.value, 'y').min(0).max(5).step(0.001).name('Big Waves Frequency Y');
+    gui.add(noiseMaterial.uniforms.uBigWavesSpeed, 'value').min(0).max(4).step(0.001).name('Big Waves Speed');
+    gui.add(noiseMaterial.uniforms.uSmallWavesElevation, 'value').min(0).max(0.4).step(0.001).name('Small Waves Elevation');
+    gui.add(noiseMaterial.uniforms.uSmallWavesFrequency, 'value').min(0).max(10).step(0.001).name('Small Waves Frequency');
+    gui.add(noiseMaterial.uniforms.uSmallWavesSpeed, 'value').min(0).max(1).step(0.001).name('Small Waves Speed');
+    gui.add(noiseMaterial.uniforms.uSmallIterations, 'value').min(0).max(5).step(1).name('Small Iterations');
+    gui.add(noiseMaterial.uniforms.uColorOffset, 'value').min(0).max(0.5).step(0.001).name('Color Offset');
+    gui.add(noiseMaterial.uniforms.uColorMultiplier, 'value').min(0).max(10).step(0.001).name('Color Multiplier');
 }
