@@ -809,7 +809,7 @@ async function init() {
 
                     camera.position.set(initialCamPos.x, initialCamPos.y, initialCamPos.z);
                     camera.setRotationFromEuler(initialCamOrientation);
-                    cameraAnimationDispatcher(camera.position, savedCamPos, camera.quaternion, new THREE.Euler(0, 0, 0, 'XYZ'), 2.5);
+                    cameraAnimationDispatcher(camera.position, savedCamPos, camera.quaternion, new THREE.Euler(0, 0, 0, 'XYZ'), 3.0);
 
                     currentState = states[1];
                     orbitControls.target = new THREE.Vector3(mainNumber.getNumberMeshPos().x + room1TargetOffset, mainNumber.getNumberMeshPos().y, mainNumber.getNumberMeshPos().z + cameraOffset / 2);
@@ -1288,10 +1288,18 @@ const tick = () => {
     if (cameraAnimation) {
 
         if (!initialCameraAnimationDone) {
-            let newTargetCamPosition = new THREE.Vector3(targetCamPosition.x, targetCamPosition.y - 0.11, targetCamPosition.z - 0.11);
-            camera.position.lerp(newTargetCamPosition, 0.015);
-            camera.quaternion.slerp(targetCamOrientation, 0.02);
-            if (new THREE.Vector3(newTargetCamPosition.x - camera.position.x, newTargetCamPosition.y - camera.position.y, newTargetCamPosition.z - camera.position.z).lengthSq() < 0.04) {
+            // let newTargetCamPosition = new THREE.Vector3(targetCamPosition.x, targetCamPosition.y - 0.11, targetCamPosition.z - 0.11);
+            // camera.position.lerp(newTargetCamPosition, 0.015);
+            // camera.quaternion.slerp(targetCamOrientation, 0.02);
+            camera.position.lerpVectors(startCamPosition, targetCamPosition, cameraAnimationTime / cameraAnimationDuration);
+            camera.quaternion.slerpQuaternions(startCamOrientation, targetCamOrientation, cameraAnimationTime / cameraAnimationDuration);
+
+            cameraAnimationTime += clockForCamera.getDelta();
+
+            if (cameraAnimationTime >= cameraAnimationDuration) {
+                camera.position.set(targetCamPosition.x, targetCamPosition.y, targetCamPosition.z);
+                camera.quaternion.set(targetCamOrientation.x, targetCamOrientation.y, targetCamOrientation.z, targetCamOrientation.w);
+
                 cameraAnimation = false;
                 cameraAnimationTime = 0;
                 clockForCamera.stop();
@@ -1303,6 +1311,19 @@ const tick = () => {
 
                 addLoadingOverlay();
             }
+
+            // if (new THREE.Vector3(newTargetCamPosition.x - camera.position.x, newTargetCamPosition.y - camera.position.y, newTargetCamPosition.z - camera.position.z).lengthSq() < 0.04) {
+            //     cameraAnimation = false;
+            //     cameraAnimationTime = 0;
+            //     clockForCamera.stop();
+
+            //     scene.add(UIInstructionMesh6);
+            //     initialCameraAnimationDone = true;
+
+            //     addUIIconGroup();
+
+            //     addLoadingOverlay();
+            // }
         }
         else {
             camera.position.lerpVectors(startCamPosition, targetCamPosition, cameraAnimationTime / cameraAnimationDuration);
