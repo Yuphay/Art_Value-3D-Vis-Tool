@@ -435,6 +435,8 @@ const loadingOverlay = new THREE.Mesh(overlayGeometry, overlayMaterial);
 
 let loadingBarElement0 = document.querySelector('.loading-bar0');
 let loadingBarElement1 = document.querySelector('.loading-bar1');
+loadingBarElement0.style.transform = `scaleX(${0.0})`;
+loadingBarElement1.style.transform = `scaleX(${0.0})`;
 
 // Fonts
 let fontAvenirBook;
@@ -1824,7 +1826,7 @@ function requestRenderIfNotRequested(caller) {
 }
 
 let initUIText3 = document.createElement('p');
-initUIText3.innerHTML = 'For a smoother experience, you may prepare a personally meaningful picture/image/drawing related to your number before getting started. (preferably in .jpg or .png)';
+initUIText3.innerHTML = 'For a smoother experience, you may prepare a personally meaningful picture/image/drawing related to your number before getting started. (preferably with high contrast)';
 initUIText3.style.fontFamily = 'verdana';
 initUIText3.style.fontSize = '120%';
 initUIText3.style.color = '#ffffff';
@@ -1855,7 +1857,7 @@ numberInputField.style.position = 'absolute';
 numberInputField.style.textAlign = 'center';
 
 let initUIText1 = document.createElement('p');
-initUIText1.innerHTML = 'Please select the quality based on your device:';
+initUIText1.innerHTML = 'Please select the quality based on your device\'s computing power:';
 initUIText1.style.fontFamily = 'verdana';
 initUIText1.style.fontSize = '100%';
 initUIText1.style.color = '#ffffff';
