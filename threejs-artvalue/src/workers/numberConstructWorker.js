@@ -37,11 +37,11 @@ self.onmessage = function (e) {
     console.log("Collision started");
 
     let workers, running;
-    let supersamplingCollisions = [[], [], [], []];
+    let supersamplingCollisions = [[], [], [], [], [], [], [], []];
     let xyCollisions = [];
 
     running = 0;
-    for (let n = 0; n < 4; n++) {
+    for (let n = 0; n < 8; n++) {
 
         console.log("running: " + running);
 
@@ -73,7 +73,7 @@ self.onmessage = function (e) {
                     for (let i = 0; i < unitCubeNumber; i++) {
                         if (k === 0) {
                             let collisionCount = 0;
-                            for (let n = 0; n < 4; n++) {
+                            for (let n = 0; n < 8; n++) {
                                 collisionCount += supersamplingCollisions[n][j][i];
                             }
                             if (collisionCount >= 4) {

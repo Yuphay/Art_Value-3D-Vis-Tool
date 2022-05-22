@@ -40,16 +40,13 @@ self.onmessage = function (e) {
         currentMesh.geometry.applyMatrix4(matrixScaling);
 
         let collisionRayCaster0 = new THREE.Raycaster();
-        let collisionRayCaster1 = new THREE.Raycaster();
         let xyCollisions = [];
 
         collisionRayCaster0.layers.set(1);
-        collisionRayCaster1.layers.set(1);
         currentMesh.layers.enable(1);
         currentMesh.material.side = THREE.DoubleSide;
         currentMesh.updateMatrixWorld();
         collisionRayCaster0.far = numberDepth;
-        collisionRayCaster1.far = numberDepth;
 
         for (let j = 0; j < unitCubeNumber; j++) {
             xyCollisions.push([]);
@@ -60,23 +57,11 @@ self.onmessage = function (e) {
                         xyPositions[j][i].y + unitCubeSideLength * 3 / 8,
                         xyPositions[j][i].z),
                         new THREE.Vector3(0, 0, 1));
-
-                    collisionRayCaster1.set(new THREE.Vector3(
-                        xyPositions[j][i].x - unitCubeSideLength * 1 / 8,
-                        xyPositions[j][i].y + unitCubeSideLength * 1 / 8,
-                        xyPositions[j][i].z),
-                        new THREE.Vector3(0, 0, 1));
                 }
                 else if (id === 1) {
                     collisionRayCaster0.set(new THREE.Vector3(
                         xyPositions[j][i].x + unitCubeSideLength * 1 / 8,
                         xyPositions[j][i].y + unitCubeSideLength * 3 / 8,
-                        xyPositions[j][i].z),
-                        new THREE.Vector3(0, 0, 1));
-
-                    collisionRayCaster1.set(new THREE.Vector3(
-                        xyPositions[j][i].x + unitCubeSideLength * 3 / 8,
-                        xyPositions[j][i].y + unitCubeSideLength * 1 / 8,
                         xyPositions[j][i].z),
                         new THREE.Vector3(0, 0, 1));
                 }
@@ -86,12 +71,6 @@ self.onmessage = function (e) {
                         xyPositions[j][i].y - unitCubeSideLength * 1 / 8,
                         xyPositions[j][i].z),
                         new THREE.Vector3(0, 0, 1));
-
-                    collisionRayCaster1.set(new THREE.Vector3(
-                        xyPositions[j][i].x - unitCubeSideLength * 1 / 8,
-                        xyPositions[j][i].y - unitCubeSideLength * 3 / 8,
-                        xyPositions[j][i].z),
-                        new THREE.Vector3(0, 0, 1));
                 }
                 else if (id === 3) {
                     collisionRayCaster0.set(new THREE.Vector3(
@@ -99,8 +78,30 @@ self.onmessage = function (e) {
                         xyPositions[j][i].y - unitCubeSideLength * 1 / 8,
                         xyPositions[j][i].z),
                         new THREE.Vector3(0, 0, 1));
-
-                    collisionRayCaster1.set(new THREE.Vector3(
+                }
+                else if (id === 4) {
+                    collisionRayCaster0.set(new THREE.Vector3(
+                        xyPositions[j][i].x - unitCubeSideLength * 1 / 8,
+                        xyPositions[j][i].y + unitCubeSideLength * 1 / 8,
+                        xyPositions[j][i].z),
+                        new THREE.Vector3(0, 0, 1));
+                }
+                else if (id === 5) {
+                    collisionRayCaster0.set(new THREE.Vector3(
+                        xyPositions[j][i].x + unitCubeSideLength * 3 / 8,
+                        xyPositions[j][i].y + unitCubeSideLength * 1 / 8,
+                        xyPositions[j][i].z),
+                        new THREE.Vector3(0, 0, 1));
+                }
+                else if (id === 6) {
+                    collisionRayCaster0.set(new THREE.Vector3(
+                        xyPositions[j][i].x - unitCubeSideLength * 1 / 8,
+                        xyPositions[j][i].y - unitCubeSideLength * 3 / 8,
+                        xyPositions[j][i].z),
+                        new THREE.Vector3(0, 0, 1));
+                }
+                else if (id === 7) {
+                    collisionRayCaster0.set(new THREE.Vector3(
                         xyPositions[j][i].x + unitCubeSideLength * 3 / 8,
                         xyPositions[j][i].y - unitCubeSideLength * 3 / 8,
                         xyPositions[j][i].z),
@@ -108,16 +109,12 @@ self.onmessage = function (e) {
                 }
 
                 const collisionRayIntersects0 = collisionRayCaster0.intersectObject(currentMesh);
-                const collisionRayIntersects1 = collisionRayCaster1.intersectObject(currentMesh);
 
                 let collisionCount = 0;
                 if (collisionRayIntersects0.length > 0) {
-                    collisionCount++;
+                    collisionCount += 1;
                 }
-                if (collisionRayIntersects1.length > 0) {
-                    collisionCount++;
-                }
-                
+
                 xyCollisions[j].push(collisionCount);
             }
         }
