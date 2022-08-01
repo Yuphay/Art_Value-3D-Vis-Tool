@@ -141,25 +141,25 @@ export class NumberConstruct {
     matchFont() {
         switch (this.numberFont) {
             case 'Avenir Black':
-                this.numberFontPath = '/fonts/Avenir Black_Regular.json';
+                this.numberFontPath = './fonts/Avenir_Black_Regular.json';
                 break;
             case 'Crash Numbering Serif':
-                this.numberFontPath = '/fonts/CrashNumberingSerif_Regular.json';
+                this.numberFontPath = './fonts/CrashNumberingSerif_Regular.json';
                 break;
             case 'Nexa Rust Handmade':
-                this.numberFontPath = '/fonts/Nexa Rust Handmade Extended_Regular.json';
+                this.numberFontPath = './fonts/Nexa_Rust_Handmade_Extended_Regular.json';
                 break;
             case 'Pecita':
-                this.numberFontPath = '/fonts/Pecita_Book.json'
+                this.numberFontPath = './fonts/Pecita_Book.json'
                 break;
             case 'Press Start 2P':
-                this.numberFontPath = '/fonts/Press Start 2P_Regular.json'
+                this.numberFontPath = './fonts/Press_Start_2P_Regular.json'
                 break;
             case 'Roboto Bold':
-                this.numberFontPath = '/fonts/Roboto_Bold.json'
+                this.numberFontPath = './fonts/Roboto_Bold.json'
                 break;
             default:
-                this.numberFontPath = '/fonts/Avenir Black_Regular.json';
+                this.numberFontPath = './fonts/Avenir_Black_Regular.json';
         }
     }
 

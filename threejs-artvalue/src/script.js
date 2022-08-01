@@ -28,33 +28,21 @@ const sizes = {
     height: window.innerHeight
 }
 
-window.addEventListener('resize', () => {
-    // Update sizes
-    sizes.width = window.innerWidth;
-    sizes.height = window.innerHeight;
-
-    // Update camera
-    camera.aspect = sizes.width / sizes.height;
-    camera.updateProjectionMatrix();
-
-    // Update renderer
-    renderer.setSize(sizes.width, sizes.height);
-
-    if (renderQuality === 0) {
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
-    }
-    else if (renderQuality === 1) {
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    }
-    else if (renderQuality === 2) {
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    }
-
-    requestRenderIfNotRequested('resize event');
-});
-
 // Canvas
 const canvas = document.querySelector('canvas.webgl');
+
+/**
+ * Renderer
+ */
+let aaEnabled = false;
+if (renderQuality === 2) aaEnabled = true;
+let renderer = new THREE.WebGLRenderer({
+    canvas: canvas,
+    alpha: true,
+    antialias: aaEnabled,
+    powerPreference: "high-performance"
+});
+renderer.setSize(sizes.width, sizes.height);
 
 // DOM Elements
 let imageHolder = document.createElement('div');
@@ -243,7 +231,7 @@ const scene = new THREE.Scene();
 // Loaders
 
 // const textureLoader = new THREE.TextureLoader()
-// const normalTexture = textureLoader.load('/textures/seamless_brick_rock_wall_normal_map.png', function (tex) {
+// const normalTexture = textureLoader.load('./textures/seamless_brick_rock_wall_normal_map.png', function (tex) {
 //     // tex and normalTexture are the same here, but that might not always be the case
 //     //console.log("normalTexture", tex.image.width, tex.image.height);
 // });
@@ -546,12 +534,6 @@ let startCamOrientation = new THREE.Quaternion();
 
 let materialAnimation = false;
 
-/**
- * Renderer
- */
-
-let renderer;
-
 // const rendererControl = gui.addFolder("Renderer Properties");
 // rendererControl.add(renderer, 'toneMappingExposure').min(0).max(2).step(0.01).onChange(requestRenderIfNotRequested);
 
@@ -578,17 +560,6 @@ const groundSpotLight2 = new THREE.SpotLight(0xFFFFFF, 200, 100, Math.PI / 17, 0
 const groundLight2Effect = new THREE.PointLight(0xFFFFFF, 20, 5);
 
 function initLightsAndShadows() {
-    let aaEnabled = false;
-    if (renderQuality === 2) aaEnabled = true;
-
-    renderer = new THREE.WebGLRenderer({
-        canvas: canvas,
-        alpha: true,
-        antialias: aaEnabled,
-        powerPreference: "high-performance"
-    });
-
-    renderer.setSize(sizes.width, sizes.height);
     renderer.physicallyCorrectLights = true;
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -718,13 +689,13 @@ async function init() {
     camera.setRotationFromEuler(initialCamOrientation);
     scene.add(camera);
 
-    const galleryAsyncLoading = gltfLoader1.loadAsync('/models/NumberGallery/glb/NumberGallery.glb');
+    const galleryAsyncLoading = gltfLoader1.loadAsync('./models/NumberGallery/glb/NumberGallery.glb');
 
-    const groundLightAsyncLoading = gltfLoader2.loadAsync('/models/Lights/groundLight.glb');
+    const groundLightAsyncLoading = gltfLoader2.loadAsync('./models/Lights/groundLight.glb');
 
-    const ceilingLightAsyncLoading = objLoader1.loadAsync('/models/Lights/CeilingLight.obj');
+    const ceilingLightAsyncLoading = objLoader1.loadAsync('./models/Lights/CeilingLight.obj');
 
-    const spotLightAsyncLoading = objLoader2.loadAsync('/models/Lights/Spotlight.obj');
+    const spotLightAsyncLoading = objLoader2.loadAsync('./models/Lights/Spotlight.obj');
 
     loadingBarElement0.style.transform = `scaleX(${0.5})`;
 
@@ -805,8 +776,8 @@ async function init() {
             loadingBarElement0.classList.add('ended');
             loadingBarElement0.style.transform = '';
 
-            Promise.all([loadSVG(['/svg/mouse_left_click.svg', '/svg/mouse_wheel.svg', '/svg/mouse_right_click.svg',
-                '/svg/camera_rotate.svg', '/svg/camera_zoom.svg', '/svg/camera_pan.svg']), asyncTimeout(1000)]).then(results => {
+            Promise.all([loadSVG(['./svg/mouse_left_click.svg', './svg/mouse_wheel.svg', './svg/mouse_right_click.svg',
+                './svg/camera_rotate.svg', './svg/camera_zoom.svg', './svg/camera_pan.svg']), asyncTimeout(1000)]).then(results => {
 
                     if (results[0]) console.log("SVG loaded!");
 
@@ -1973,10 +1944,35 @@ document.body.appendChild(buttonHolder);
 /**
  * Event Handlers (Controller)
  */
-
+window.addEventListener('resize', onResize, false);
 window.addEventListener('mousemove', onMouseMove, false);
 window.addEventListener('click', onClick, false);
 window.addEventListener('wheel', onZoom, false);
+
+function onResize(event) {
+    // Update sizes
+    sizes.width = window.innerWidth;
+    sizes.height = window.innerHeight;
+
+    // Update camera
+    camera.aspect = sizes.width / sizes.height;
+    camera.updateProjectionMatrix();
+
+    // Update renderer
+    renderer.setSize(sizes.width, sizes.height);
+
+    if (renderQuality === 0) {
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
+    }
+    else if (renderQuality === 1) {
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    }
+    else if (renderQuality === 2) {
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    }
+
+    requestRenderIfNotRequested('resize event');
+}
 
 function onMouseMove(event) {
 
@@ -2476,7 +2472,7 @@ function cameraAnimationDispatcher(startPos, targetPos, startOrientation, target
 
 function initUI() {
     return new Promise(resolve => {
-        fontLoader.load('/fonts/Avenir Black_Regular.json', function (font) {
+        fontLoader.load('./fonts/Avenir_Black_Regular.json', function (font) {
             UITitleGeometry1 = new THREE.TextGeometry('Customization Panel', {
                 font: font,
                 size: 0.32,
@@ -2599,7 +2595,7 @@ function initUI() {
             crossGeometry.center();
             crossMesh = new THREE.Mesh(crossGeometry, materialUI);
 
-            fontLoader.load('/fonts/Avenir Book_Regular.json', function (font) {
+            fontLoader.load('./fonts/Avenir_Book_Regular.json', function (font) {
                 fontAvenirBook = font;
                 UIContentGeometry1 = new THREE.TextGeometry(mainNumberOptions.numberStyle, {
                     font: font,
